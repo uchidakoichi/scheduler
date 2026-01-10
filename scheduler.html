@@ -20,14 +20,16 @@
             --grid-border: rgba(255, 255, 255, 0.1);
 
             /* Category Colors */
-            --cat-a: #3b82f6;
-            /* Blue */
-            --cat-b: #10b981;
-            /* Green */
-            --cat-c: #a855f7;
-            /* Purple */
-            --cat-d: #f97316;
-            /* Orange */
+            --cat-zen: #3b82f6;
+            /* Blue - 全 */
+            --cat-sei: #10b981;
+            /* Green - 整 */
+            --cat-toku: #a855f7;
+            /* Purple - 特 */
+            --cat-cho: #f97316;
+            /* Orange - 調 */
+            --cat-tou: #ef4444;
+            /* Red - 当 */
         }
 
         * {
@@ -401,6 +403,7 @@
             padding: 0.75rem;
             border-radius: 8px;
             border: 1px solid var(--border-color);
+            justify-content: space-around;
         }
 
         .radio-option {
@@ -574,158 +577,224 @@
     </div>
 
     <script>
-        // --- Configuration ---
-        const CATEGORIES = [
-            { id: 'cat_a', name: 'A', color: 'var(--cat-a)' },
-            { id: 'cat_b', name: 'B', color: 'var(--cat-b)' },
-            { id: 'cat_c', name: 'C', color: 'var(--cat-c)' },
-            { id: 'cat_d', name: 'D', color: 'var(--cat-d)' },
-        ];
-        // Map old user IDs to new Categories for backward compatibility if needed, 
-        // or just assume new data uses cat_x. 
-        // We'll treat 'u1' -> 'cat_a' etc for display if strictly needed, but let's just use the ID directly.
+    // --- Configuration ---
+    const CATEGORIES = [
+        { id: 'cat_zen', name: '全', color: 'var(--cat-zen)' },
+        { id: 'cat_sei', name: '整', color: 'var(--cat-sei)' },
+        { id: 'cat_toku', name: '特', color: 'var(--cat-toku)' },
+        { id: 'cat_cho', name: '調', color: 'var(--cat-cho)' },
+        { id: 'cat_tou', name: '当', color: 'var(--cat-tou)' },
+    ];
 
-        // --- State ---
-        let state = {
-            currentDate: new Date(),
-            activeFilters: new Set(CATEGORIES.map(c => c.id)), // All active by default
-            urlUserName: '',
-            events: []
-        };
+    // --- State ---
+    let state = {
+        currentDate: new Date(),
+        activeFilters: new Set(CATEGORIES.map(c => c.id)), 
+        writerName: '',
+        events: [] 
+    };
+    
+    let fileHandle = null;
+    let filePoller = null;
+    let lastModifiedTime = 0;
+    
+    let editingEventId = null;
+    
+    // --- IndexedDB Manager ---
+    const DB_NAME = 'TeamSyncDB';
+    const STORE_NAME = 'prefs';
+    let db = null;
 
-        let fileHandle = null;
-        let filePoller = null;
-        let lastModifiedTime = 0;
+    async function initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, 1);
+            
+            request.onupgradeneeded = (e) => {
+                db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME);
+                }
+            };
+            
+            request.onsuccess = (e) => {
+                db = e.target.result;
+                resolve(db);
+            };
+            
+            request.onerror = (e) => reject(e);
+        });
+    }
 
-        let editingEventId = null;
+    async function setPref(key, value) {
+        if (!db) await initDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            store.put(value, key);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject();
+        });
+    }
 
-        // --- Core Logic: File System Access ---
+    async function getPref(key) {
+        if (!db) await initDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const req = store.get(key);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject();
+        });
+    }
 
-        async function connectDatabase() {
+    // --- Core Logic: Initialize ---
+
+    async function init() {
+        await initDB();
+
+        // 1. Writer Name
+        const search = window.location.search;
+        let urlName = '';
+        if (search) {
+            if (search.startsWith("?name=")) urlName = decodeURIComponent(search.substring(6));
+            else if (search.startsWith("?=")) urlName = decodeURIComponent(search.substring(2));
+            else urlName = decodeURIComponent(search.substring(1));
+        }
+
+        if (urlName) {
+            state.writerName = urlName;
+            setPref('writerName', urlName); 
+        } else {
+            const savedName = await getPref('writerName');
+            if (savedName) state.writerName = savedName;
+        }
+
+        // 2. Filter Logic
+        const savedFilters = await getPref('activeFilters');
+        if (savedFilters && Array.isArray(savedFilters) && savedFilters.length > 0) {
+            // Need to validate if saved filters exist in current CATEGORIES
+            // If outdated IDs (like u1, cat_a) exist, they won't match, so fallback to all
+            const validSaved = savedFilters.filter(id => CATEGORIES.some(c => c.id === id));
+            if (validSaved.length > 0) {
+                state.activeFilters = new Set(validSaved);
+            }
+        }
+
+        // 3. Render
+        renderFilters();
+        renderModalSelector();
+        renderCalendar(); 
+    }
+
+    // --- File System Access ---
+
+    async function connectDatabase() {
+        try {
             try {
-                try {
-                    [fileHandle] = await window.showOpenFilePicker({
-                        types: [{ description: 'Scheduler Data JSON', accept: { 'application/json': ['.json'] } }],
-                        multiple: false
+                [fileHandle] = await window.showOpenFilePicker({
+                    types: [{ description: 'Scheduler Data JSON', accept: {'application/json': ['.json']} }],
+                    multiple: false
+                });
+            } catch (e) {
+                if (confirm("既存ファイルが見つかりませんか？新しいデータファイルを作成しますか？")) {
+                     fileHandle = await window.showSaveFilePicker({
+                        suggestedName: 'scheduler_data.json',
+                        types: [{ description: 'Scheduler Data JSON', accept: {'application/json': ['.json']} }]
                     });
-                } catch (e) {
-                    if (confirm("既存ファイルが見つかりませんか？新しいデータファイルを作成しますか？")) {
-                        fileHandle = await window.showSaveFilePicker({
-                            suggestedName: 'scheduler_data.json',
-                            types: [{ description: 'Scheduler Data JSON', accept: { 'application/json': ['.json'] } }]
-                        });
-                        state.events = [];
-                        await writeToFile(state.events);
-                    } else {
-                        return;
-                    }
+                    state.events = [];
+                    await writeToFile(state.events);
+                } else {
+                    return;
                 }
+            }
 
-                await loadFromFile();
+            await loadFromFile();
+            
+            if (filePoller) clearInterval(filePoller);
+            filePoller = setInterval(checkFileUpdates, 3000); 
+            
+            document.getElementById('introBarrier').style.display = 'none';
+            document.getElementById('mainContent').classList.add('active');
+            document.getElementById('btnConnect').textContent = '接続済み: ' + fileHandle.name;
+            document.getElementById('btnConnect').classList.add('success');
+            document.getElementById('btnConnect').classList.remove('primary');
+            updateStatus('接続完了', 'connected');
 
-                if (filePoller) clearInterval(filePoller);
-                filePoller = setInterval(checkFileUpdates, 3000);
+        } catch (err) {
+            console.error(err);
+            if (err.name !== 'AbortError') alert('接続エラー: ' + err.message);
+        }
+    }
 
-                document.getElementById('introBarrier').style.display = 'none';
-                document.getElementById('mainContent').classList.add('active');
-                document.getElementById('btnConnect').textContent = '接続済み: ' + fileHandle.name;
-                document.getElementById('btnConnect').classList.add('success');
-                document.getElementById('btnConnect').classList.remove('primary');
+    async function checkFileUpdates() {
+        if (!fileHandle) return;
+        try {
+            const file = await fileHandle.getFile();
+            if (file.lastModified > lastModifiedTime) {
+                updateStatus('同期中...', 'syncing');
+                const text = await file.text();
+                state.events = JSON.parse(text);
+                lastModifiedTime = file.lastModified;
+                renderCalendar();
                 updateStatus('接続完了', 'connected');
-
-            } catch (err) {
-                console.error(err);
-                if (err.name !== 'AbortError') alert('接続エラー: ' + err.message);
             }
+        } catch (err) {
+            console.warn("Polling error", err);
+            updateStatus('再接続中...', 'syncing');
         }
+    }
 
-        async function checkFileUpdates() {
-            if (!fileHandle) return;
-            try {
-                const file = await fileHandle.getFile();
-                if (file.lastModified > lastModifiedTime) {
-                    updateStatus('同期中...', 'syncing');
-                    const text = await file.text();
-                    state.events = JSON.parse(text);
-                    lastModifiedTime = file.lastModified;
-                    renderCalendar();
-                    updateStatus('接続完了', 'connected');
-                }
-            } catch (err) {
-                console.warn("Polling error", err);
-                updateStatus('再接続中...', 'syncing');
-            }
+    async function loadFromFile() {
+        const file = await fileHandle.getFile();
+        const text = await file.text();
+        lastModifiedTime = file.lastModified;
+        state.events = text ? JSON.parse(text) : [];
+        renderCalendar();
+    }
+
+    async function writeToFile(events) {
+        if (!fileHandle) return;
+        try {
+            updateStatus('保存中...', 'syncing');
+            const writable = await fileHandle.createWritable();
+            await writable.write(JSON.stringify(events, null, 2));
+            await writable.close();
+            
+            const file = await fileHandle.getFile();
+            lastModifiedTime = file.lastModified;
+            
+            updateStatus('保存完了', 'connected');
+        } catch (err) {
+            alert('保存に失敗しました: ' + err.message);
+            updateStatus('保存失敗', 'dot');
         }
+    }
 
-        async function loadFromFile() {
+    async function saveTransaction(actionCallback) {
+        if (!fileHandle) return;
+        try {
             const file = await fileHandle.getFile();
             const text = await file.text();
-            lastModifiedTime = file.lastModified;
-            state.events = text ? JSON.parse(text) : [];
+            let currentEvents = text ? JSON.parse(text) : [];
+            currentEvents = actionCallback(currentEvents);
+            await writeToFile(currentEvents);
+            state.events = currentEvents;
             renderCalendar();
+        } catch (err) {
+            alert("競合が発生したか、アクセスできませんでした。もう一度試してください。" + err.message);
         }
+    }
 
-        async function writeToFile(events) {
-            if (!fileHandle) return;
-            try {
-                updateStatus('保存中...', 'syncing');
-                const writable = await fileHandle.createWritable();
-                await writable.write(JSON.stringify(events, null, 2));
-                await writable.close();
+    // --- UI Helpers ---
 
-                const file = await fileHandle.getFile();
-                lastModifiedTime = file.lastModified;
+    function updateStatus(text, dotClass) {
+        document.getElementById('statusText').textContent = text;
+        document.getElementById('statusDot').className = 'dot ' + dotClass;
+    }
 
-                updateStatus('保存完了', 'connected');
-            } catch (err) {
-                alert('保存に失敗しました: ' + err.message);
-                updateStatus('保存失敗', 'dot');
-            }
-        }
-
-        async function saveTransaction(actionCallback) {
-            if (!fileHandle) return;
-            try {
-                const file = await fileHandle.getFile();
-                const text = await file.text();
-                let currentEvents = text ? JSON.parse(text) : [];
-                currentEvents = actionCallback(currentEvents);
-                await writeToFile(currentEvents);
-                state.events = currentEvents;
-                renderCalendar();
-            } catch (err) {
-                alert("競合が発生したか、アクセスできませんでした。もう一度試してください。" + err.message);
-            }
-        }
-
-        // --- App Init ---
-
-        function init() {
-            // Parse URL
-            const search = window.location.search;
-            if (search) {
-                let name = "";
-                if (search.startsWith("?name=")) name = decodeURIComponent(search.substring(6));
-                else if (search.startsWith("?=")) name = decodeURIComponent(search.substring(2));
-                else name = decodeURIComponent(search.substring(1));
-                if (name) state.urlUserName = name;
-            }
-
-            renderFilters();
-            renderModalSelector();
-            renderCalendar();
-        }
-
-        // --- UI Helpers ---
-
-        function updateStatus(text, dotClass) {
-            document.getElementById('statusText').textContent = text;
-            document.getElementById('statusDot').className = 'dot ' + dotClass;
-        }
-
-        function renderFilters() {
-            const container = document.getElementById('filterGroup');
-            const btnsHtml = CATEGORIES.map(cat => `
+    function renderFilters() {
+        const container = document.getElementById('filterGroup');
+        const btnsHtml = CATEGORIES.map(cat => `
             <div class="filter-btn ${state.activeFilters.has(cat.id) ? 'active' : ''}" 
                  style="background: ${cat.color}" 
                  onclick="toggleFilter('${cat.id}')"
@@ -733,96 +802,84 @@
                 ${cat.name}
             </div>
         `).join('');
-            // Keep the label, inject buttons
-            container.innerHTML = `<span class="filter-label">表示:</span>` + btnsHtml;
+        container.innerHTML = `<span class="filter-label">表示:</span>` + btnsHtml;
+    }
+    
+    function toggleFilter(catId) {
+        if (state.activeFilters.has(catId)) {
+            state.activeFilters.delete(catId);
+        } else {
+            state.activeFilters.add(catId);
         }
-
-        function toggleFilter(catId) {
-            if (state.activeFilters.has(catId)) {
-                state.activeFilters.delete(catId);
-            } else {
-                state.activeFilters.add(catId);
-            }
-            renderFilters();
-            renderCalendar();
-        }
-
-        function renderModalSelector() {
-            const container = document.getElementById('modalCategorySelector');
-            container.innerHTML = CATEGORIES.map((cat, idx) => `
+        
+        setPref('activeFilters', Array.from(state.activeFilters));
+        renderFilters();
+        renderCalendar();
+    }
+    
+    function renderModalSelector() {
+        const container = document.getElementById('modalCategorySelector');
+        container.innerHTML = CATEGORIES.map((cat, idx) => `
             <label class="radio-option">
-                <input type="radio" name="category" value="${cat.id}" ${idx === 0 ? 'checked' : ''}>
+                <input type="radio" name="category" value="${cat.id}" ${idx===0 ? 'checked':''}>
                 <div class="radio-circle" style="border-color: ${cat.color}; background: ${cat.color}20"></div>
                 ${cat.name}
             </label>
         `).join('');
+    }
+
+    function renderCalendar() {
+        const year = state.currentDate.getFullYear();
+        const month = state.currentDate.getMonth();
+        
+        document.getElementById('monthLabel').textContent = `${year}年 ${month + 1}月`;
+
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        
+        const startDayIndex = firstDay.getDay(); 
+        const totalDays = lastDay.getDate();
+        
+        const grid = document.getElementById('calendarGrid');
+        const headers = Array.from(grid.children).slice(0, 7);
+        grid.innerHTML = '';
+        headers.forEach(h => grid.appendChild(h));
+
+        const prevMonthLastDay = new Date(year, month, 0).getDate();
+        for (let i = startDayIndex - 1; i >= 0; i--) {
+            grid.innerHTML += createDayHTML(prevMonthLastDay - i, true);
         }
 
-        function renderCalendar() {
-            const year = state.currentDate.getFullYear();
-            const month = state.currentDate.getMonth();
-
-            document.getElementById('monthLabel').textContent = `${year}年 ${month + 1}月`;
-
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
-
-            const startDayIndex = firstDay.getDay();
-            const totalDays = lastDay.getDate();
-
-            const grid = document.getElementById('calendarGrid');
-            const headers = Array.from(grid.children).slice(0, 7);
-            grid.innerHTML = '';
-            headers.forEach(h => grid.appendChild(h));
-
-            const prevMonthLastDay = new Date(year, month, 0).getDate();
-            for (let i = startDayIndex - 1; i >= 0; i--) {
-                grid.innerHTML += createDayHTML(prevMonthLastDay - i, true);
-            }
-
-            const today = new Date();
-            for (let i = 1; i <= totalDays; i++) {
-                const isToday = i === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-                const dayDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                grid.innerHTML += createDayHTML(i, false, isToday, dayDateStr);
-            }
-
-            const remaining = 42 - (startDayIndex + totalDays);
-            for (let i = 1; i <= remaining; i++) {
-                grid.innerHTML += createDayHTML(i, true);
-            }
+        const today = new Date();
+        for (let i = 1; i <= totalDays; i++) {
+            const isToday = i === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+            const dayDateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+            grid.innerHTML += createDayHTML(i, false, isToday, dayDateStr);
         }
 
-        function createDayHTML(dayNum, isGrey, isToday = false, dateStr = '') {
-            let eventsHTML = '';
+        const remaining = 42 - (startDayIndex + totalDays);
+        for (let i = 1; i <= remaining; i++) {
+            grid.innerHTML += createDayHTML(i, true);
+        }
+    }
 
-            if (!isGrey && dateStr) {
-                // Filter Logic
-                const dayEvents = state.events.filter(e => {
-                    // Map old u1..u4 to cat_a..cat_d if necessary, or just check straightforwardly
-                    let catId = e.categoryId || e.userId;
-                    // Legacy support mapping
-                    if (catId === 'u1') catId = 'cat_a';
-                    if (catId === 'u2') catId = 'cat_b';
-                    if (catId === 'u3') catId = 'cat_c';
-                    if (catId === 'u4') catId = 'cat_d';
-
-                    return e.date === dateStr && state.activeFilters.has(catId);
-                });
-
-                dayEvents.sort((a, b) => a.time.localeCompare(b.time));
-
-                dayEvents.forEach(e => {
-                    let catId = e.categoryId || e.userId;
-                    if (catId === 'u1') catId = 'cat_a';
-                    if (catId === 'u2') catId = 'cat_b';
-                    if (catId === 'u3') catId = 'cat_c';
-                    if (catId === 'u4') catId = 'cat_d';
-
-                    const cat = CATEGORIES.find(c => c.id === catId) || CATEGORIES[0];
-                    const writerName = e.writer ? `<span class="event-writer">${escapeHtml(e.writer)}</span>` : '';
-
-                    eventsHTML += `
+    function createDayHTML(dayNum, isGrey, isToday = false, dateStr = '') {
+        let eventsHTML = '';
+        
+        if (!isGrey && dateStr) {
+            const dayEvents = state.events.filter(e => {
+                let catId = resolveCategoryId(e);
+                return e.date === dateStr && state.activeFilters.has(catId);
+            });
+            
+            dayEvents.sort((a,b) => a.time.localeCompare(b.time));
+            
+            dayEvents.forEach(e => {
+                let catId = resolveCategoryId(e);
+                const cat = CATEGORIES.find(c => c.id === catId) || CATEGORIES[0];
+                const writerName = e.writer ? `<span class="event-writer">${escapeHtml(e.writer)}</span>` : '';
+                
+                eventsHTML += `
                     <div class="event-chip" 
                          style="background: ${cat.color}"
                          onclick="openEditModal('${e.id}', event)">
@@ -832,127 +889,141 @@
                          ${writerName}
                     </div>
                 `;
-                });
-            }
+            });
+        }
 
-            return `
+        return `
             <div class="day-cell ${isGrey ? 'other-month' : ''} ${isToday ? 'today' : ''}"
                  ${!isGrey ? `onclick="openAddModal('${dateStr}')"` : ''}>
                 <div class="day-number">${dayNum}</div>
                 <div class="events-stack">${eventsHTML}</div>
             </div>
         `;
+    }
+
+    // Helper to map old IDs to new ones
+    function resolveCategoryId(evt) {
+        let raw = evt.categoryId || evt.userId;
+        // Legacy Mappings
+        if (raw === 'u1' || raw === 'cat_a') return 'cat_zen';
+        if (raw === 'u2' || raw === 'cat_b') return 'cat_sei';
+        if (raw === 'u3' || raw === 'cat_c') return 'cat_toku';
+        if (raw === 'u4' || raw === 'cat_d') return 'cat_cho';
+        
+        // If it's already one of the new IDs, return it
+        if (CATEGORIES.some(c => c.id === raw)) return raw;
+        
+        // Fallback
+        return 'cat_zen';
+    }
+
+    // --- Modal Actions ---
+
+    function openAddModal(dateStr) {
+        if (!fileHandle) { alert("まずは「データファイルを選択」してください。"); return; }
+        
+        editingEventId = null;
+        document.getElementById('modalTitle').textContent = '予定を追加';
+        document.getElementById('eventTitle').value = '';
+        document.getElementById('eventDate').value = dateStr;
+        document.getElementById('eventTime').value = '12:00';
+        document.getElementById('eventDesc').value = '';
+        document.getElementById('eventWriter').value = state.writerName || ''; 
+        
+        document.querySelector('input[name="category"][value="cat_zen"]').checked = true;
+
+        document.getElementById('btnDelete').style.display = 'none';
+        document.getElementById('eventModal').classList.add('open');
+        setTimeout(()=>document.getElementById('eventTitle').focus(), 100);
+    }
+
+    function openEditModal(evtId, e) {
+        e.stopPropagation();
+        const evt = state.events.find(x => x.id === evtId);
+        if (!evt) return; 
+
+        editingEventId = evtId;
+        document.getElementById('modalTitle').textContent = '予定を編集';
+        document.getElementById('eventTitle').value = evt.title;
+        document.getElementById('eventDate').value = evt.date;
+        document.getElementById('eventTime').value = evt.time;
+        document.getElementById('eventDesc').value = evt.desc;
+        document.getElementById('eventWriter').value = evt.writer || '';
+        
+        const catId = resolveCategoryId(evt);
+        const radio = document.querySelector(`input[name="category"][value="${catId}"]`) || document.querySelector('input[name="category"][value="cat_zen"]');
+        if (radio) radio.checked = true;
+
+        document.getElementById('btnDelete').style.display = 'block';
+        document.getElementById('eventModal').classList.add('open');
+    }
+
+    function closeModal() {
+        document.getElementById('eventModal').classList.remove('open');
+    }
+
+    async function saveEvent() {
+        const title = document.getElementById('eventTitle').value;
+        const date = document.getElementById('eventDate').value;
+        const time = document.getElementById('eventTime').value;
+        const desc = document.getElementById('eventDesc').value;
+        const writer = document.getElementById('eventWriter').value;
+        
+        const categoryId = document.querySelector('input[name="category"]:checked').value;
+
+        if (!title || !date) { alert('必須項目がありません'); return; }
+        
+        if (writer !== state.writerName) {
+            state.writerName = writer;
+            setPref('writerName', writer);
         }
 
-        // --- Modal Actions ---
+        closeModal(); 
 
-        function openAddModal(dateStr) {
-            if (!fileHandle) { alert("まずは「データファイルを選択」してください。"); return; }
+        await saveTransaction((events) => {
+            if (editingEventId) {
+                // Update
+                return events.map(e => e.id === editingEventId ? { 
+                    ...e, title, date, time, desc, writer, categoryId, updatedAt: Date.now() 
+                } : e);
+            } else {
+                // Create
+                const newEvent = {
+                    id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+                    title, date, time, desc, writer, categoryId,
+                    userId: categoryId, 
+                    createdAt: Date.now()
+                };
+                return [...events, newEvent];
+            }
+        });
+    }
 
-            editingEventId = null;
-            document.getElementById('modalTitle').textContent = '予定を追加';
-            document.getElementById('eventTitle').value = '';
-            document.getElementById('eventDate').value = dateStr;
-            document.getElementById('eventTime').value = '12:00';
-            document.getElementById('eventDesc').value = '';
-            document.getElementById('eventWriter').value = state.urlUserName || '';
+    async function deleteEvent() {
+        if (!confirm('削除しますか？')) return;
+        closeModal();
+        await saveTransaction((events) => {
+            return events.filter(e => e.id !== editingEventId);
+        });
+    }
 
-            // Reset radio to first
-            document.querySelector('input[name="category"][value="cat_a"]').checked = true;
+    function changeMonth(delta) {
+        state.currentDate.setMonth(state.currentDate.getMonth() + delta);
+        renderCalendar();
+    }
+    
+    function goToToday() {
+        state.currentDate = new Date();
+        renderCalendar();
+    }
 
-            document.getElementById('btnDelete').style.display = 'none';
-            document.getElementById('eventModal').classList.add('open');
-            setTimeout(() => document.getElementById('eventTitle').focus(), 100);
-        }
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
 
-        function openEditModal(evtId, e) {
-            e.stopPropagation();
-            const evt = state.events.find(x => x.id === evtId);
-            if (!evt) return;
-
-            editingEventId = evtId;
-            document.getElementById('modalTitle').textContent = '予定を編集';
-            document.getElementById('eventTitle').value = evt.title;
-            document.getElementById('eventDate').value = evt.date;
-            document.getElementById('eventTime').value = evt.time;
-            document.getElementById('eventDesc').value = evt.desc;
-            document.getElementById('eventWriter').value = evt.writer || '';
-
-            // Set Radio
-            let catId = evt.categoryId || evt.userId;
-            if (catId === 'u1') catId = 'cat_a';
-            if (catId === 'u2') catId = 'cat_b';
-            if (catId === 'u3') catId = 'cat_c';
-            if (catId === 'u4') catId = 'cat_d';
-
-            const radio = document.querySelector(`input[name="category"][value="${catId}"]`) || document.querySelector('input[name="category"][value="cat_a"]');
-            if (radio) radio.checked = true;
-
-            document.getElementById('btnDelete').style.display = 'block';
-            document.getElementById('eventModal').classList.add('open');
-        }
-
-        function closeModal() {
-            document.getElementById('eventModal').classList.remove('open');
-        }
-
-        async function saveEvent() {
-            const title = document.getElementById('eventTitle').value;
-            const date = document.getElementById('eventDate').value;
-            const time = document.getElementById('eventTime').value;
-            const desc = document.getElementById('eventDesc').value;
-            const writer = document.getElementById('eventWriter').value;
-
-            const categoryId = document.querySelector('input[name="category"]:checked').value;
-
-            if (!title || !date) { alert('必須項目がありません'); return; }
-
-            closeModal();
-
-            await saveTransaction((events) => {
-                if (editingEventId) {
-                    // Update
-                    return events.map(e => e.id === editingEventId ? {
-                        ...e, title, date, time, desc, writer, categoryId, updatedAt: Date.now()
-                    } : e);
-                } else {
-                    // Create
-                    const newEvent = {
-                        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
-                        title, date, time, desc, writer, categoryId,
-                        userId: categoryId, /* legacy compat fallback */
-                        createdAt: Date.now()
-                    };
-                    return [...events, newEvent];
-                }
-            });
-        }
-
-        async function deleteEvent() {
-            if (!confirm('削除しますか？')) return;
-            closeModal();
-            await saveTransaction((events) => {
-                return events.filter(e => e.id !== editingEventId);
-            });
-        }
-
-        function changeMonth(delta) {
-            state.currentDate.setMonth(state.currentDate.getMonth() + delta);
-            renderCalendar();
-        }
-
-        function goToToday() {
-            state.currentDate = new Date();
-            renderCalendar();
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
-
-        // Init
-        init();
+    // Boot
+    init();
 
     </script>
 </body>
