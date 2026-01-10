@@ -925,13 +925,8 @@
         // Helper to map old IDs to new ones
         function resolveCategoryId(evt) {
             let raw = evt.categoryId || evt.userId;
-            // Legacy Mappings
-            if (raw === 'u1' || raw === 'cat_a') return 'cat_zen';
-            if (raw === 'u2' || raw === 'cat_b') return 'cat_sei';
-            if (raw === 'u3' || raw === 'cat_c') return 'cat_toku';
-            if (raw === 'u4' || raw === 'cat_d') return 'cat_cho';
 
-            // If it's already one of the new IDs, return it
+            // If it's a valid ID, return it
             if (CATEGORIES.some(c => c.id === raw)) return raw;
 
             // Fallback
