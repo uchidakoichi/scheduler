@@ -1,0 +1,43 @@
+[
+  {
+    "id": "evt_sample_01",
+    "title": "定例ミーティング",
+    "date": "2026-01-12",
+    "time": "10:00",
+    "desc": "週次進捗報告会",
+    "writer": "田中",
+    "userId": "u1",
+    "createdAt": 1768180000000
+  },
+  {
+    "id": "evt_sample_02",
+    "title": "ランチ会",
+    "date": "2026-01-12",
+    "time": "12:00",
+    "desc": "駅前のイタリアン",
+    "writer": "佐藤",
+    "userId": "u2",
+    "createdAt": 1768183600000
+  },
+  {
+    "id": "evt_sample_03",
+    "title": "プロジェクト締め切り",
+    "date": "2026-01-15",
+    "time": "18:00",
+    "desc": "最終確認必須",
+    "writer": "鈴木",
+    "userId": "u3",
+    "createdAt": 1768440000000
+  },
+  {
+    "id": "mk8lku95mk2rc82xuaa",
+    "title": "テス",
+    "date": "2026-01-01",
+    "time": "12:00",
+    "desc": "",
+    "writer": "内田",
+    "categoryId": "cat_a",
+    "userId": "cat_a",
+    "createdAt": 1768067230505
+  }
+]
