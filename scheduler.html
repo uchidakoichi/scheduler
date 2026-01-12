@@ -487,6 +487,143 @@
             max-width: 400px;
             margin: 0 auto;
         }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+                color: black;
+                height: auto;
+                overflow: visible;
+                display: block;
+            }
+
+            /* Hide interactive/non-essential elements */
+            header,
+            .intro-barrier,
+            .modal-overlay,
+            .controls,
+            .filter-group,
+            .btn {
+                display: none !important;
+            }
+
+            /* Helper: spacing for the month header */
+            .calendar-header div[style*="width: 120px"] {
+                display: none;
+            }
+
+            /* Main Layout */
+            main {
+                display: block !important;
+                opacity: 1 !important;
+                padding: 0;
+                margin: 0;
+            }
+
+            .calendar-header {
+                justify-content: center;
+                margin: 0 0 1rem 0;
+                padding: 0;
+            }
+
+            .current-month {
+                color: black;
+                font-size: 1.8rem;
+                margin: 0;
+            }
+
+            /* Grid Bordering */
+            .calendar-grid {
+                border: 2px solid #000;
+                background: transparent;
+                gap: 0;
+                display: grid;
+                /* Maintain grid layout */
+            }
+
+            .weekday {
+                background: #eee !important;
+                /* Force light grey */
+                color: black;
+                border: 1px solid #000;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .day-cell {
+                background: white !important;
+                border: 1px solid #000;
+                min-height: auto;
+                /* Allow height to adjust */
+                height: 100px;
+                page-break-inside: avoid;
+            }
+
+            .day-cell.other-month {
+                background: #f4f4f4 !important;
+                opacity: 1;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            /* Event Styling */
+            .event-chip {
+                background: white !important;
+                color: black !important;
+                border: 1px solid #000;
+                box-shadow: none;
+                margin-bottom: 2px;
+                padding: 1px 2px;
+                font-size: 0.7rem;
+            }
+
+            /* Category Prefixes */
+            .event-chip::before {
+                font-weight: bold;
+                margin-right: 2px;
+            }
+
+            .event-chip[data-category="cat_zen"]::before {
+                content: "【全】";
+            }
+
+            .event-chip[data-category="cat_sei"]::before {
+                content: "【整】";
+            }
+
+            .event-chip[data-category="cat_toku"]::before {
+                content: "【特】";
+            }
+
+            .event-chip[data-category="cat_cho"]::before {
+                content: "【調】";
+            }
+
+            .event-chip[data-category="cat_tou"]::before {
+                content: "【当】";
+            }
+
+            .day-cell.today .day-number {
+                background: transparent;
+                color: black;
+                border: 2px solid black;
+                width: 20px;
+                height: 20px;
+            }
+
+            .day-number {
+                color: black;
+                margin-left: 4px;
+                margin-top: 4px;
+            }
+
+            .event-writer {
+                border: 1px solid #aaa;
+                background: transparent;
+                color: #333;
+            }
+        }
     </style>
 </head>
 
@@ -902,6 +1039,7 @@
 
                     eventsHTML += `
                     <div class="event-chip" 
+                         data-category="${cat.id}"
                          style="background: ${cat.color}"
                          onclick="openEditModal('${e.id}', event)">
                          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
