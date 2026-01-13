@@ -30,6 +30,8 @@
             /* Orange - 調 */
             --cat-tou: #ef4444;
             /* Red - 当 */
+            --cat-kyu: #64748b;
+            /* Slate - 休 */
         }
 
         * {
@@ -464,6 +466,60 @@
             margin-top: 1.5rem;
         }
 
+        /* User Management */
+        .user-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            padding: 4px;
+        }
+
+        .user-chip {
+            background: var(--surface-hover);
+            padding: 0.5rem;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.875rem;
+        }
+
+        .user-chip .delete-btn {
+            color: var(--danger-color);
+            cursor: pointer;
+            padding: 2px;
+            margin-left: 4px;
+        }
+
+        /* Checkbox Grid for Writers */
+        .writer-checkboxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 0.5rem;
+            max-height: 150px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .writer-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .writer-option input {
+            width: auto;
+            margin: 0;
+        }
+
         /* Intro Barrier */
         .intro-barrier {
             position: absolute;
@@ -604,6 +660,10 @@
                 content: "【当】";
             }
 
+            .event-chip[data-category="cat_kyu"]::before {
+                content: "【休】";
+            }
+
             .day-cell.today .day-number {
                 background: transparent;
                 color: black;
@@ -651,6 +711,15 @@
                 <!-- Injected by JS -->
             </div>
 
+            <button class="btn" onclick="openUserModal()" id="btnUsers">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                メンバー設定
+            </button>
             <button class="btn primary" onclick="connectDatabase()" id="btnConnect">
                 データファイルを選択 (共有)
             </button>
@@ -718,8 +787,10 @@
                 </div>
             </div>
             <div class="form-group">
-                <label>記入者</label>
-                <input type="text" id="eventWriter" placeholder="名前...">
+                <label>氏名 (複数選択可)</label>
+                <div class="writer-checkboxes" id="writerCheckboxes">
+                    <!-- JS injected -->
+                </div>
             </div>
             <div class="form-group">
                 <label>詳細 / メモ</label>
@@ -734,6 +805,26 @@
         </div>
     </div>
 
+    <!-- User Management Modal -->
+    <div class="modal-overlay" id="userModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">メンバー設定 (最大99名)</h3>
+                <button class="btn btn-icon-only" onclick="closeUserModal()"
+                    style="border:none; background:none; font-size:1.5rem;">&times;</button>
+            </div>
+            <div class="form-group">
+                <div class="user-list" id="userListDisplay">
+                    <!-- JS Injected -->
+                </div>
+            </div>
+            <div class="form-group" style="display:flex; gap:0.5rem;">
+                <input type="text" id="newUserName" placeholder="新しい氏名を入力...">
+                <button class="btn primary" onclick="addUser()">追加</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- Configuration ---
         const CATEGORIES = [
@@ -742,13 +833,14 @@
             { id: 'cat_toku', name: '特', color: 'var(--cat-toku)' },
             { id: 'cat_cho', name: '調', color: 'var(--cat-cho)' },
             { id: 'cat_tou', name: '当', color: 'var(--cat-tou)' },
+            { id: 'cat_kyu', name: '休', color: 'var(--cat-kyu)' },
         ];
 
         // --- State ---
         let state = {
             currentDate: new Date(),
             activeFilters: new Set(CATEGORIES.map(c => c.id)),
-            writerName: '',
+            users: [], // List of registered names
             events: []
         };
 
@@ -891,7 +983,16 @@
                 if (file.lastModified > lastModifiedTime) {
                     updateStatus('同期中...', 'syncing');
                     const text = await file.text();
-                    state.events = JSON.parse(text);
+                    const json = JSON.parse(text);
+
+                    if (Array.isArray(json)) {
+                        state.events = json;
+                        state.users = [];
+                    } else {
+                        state.events = json.events || [];
+                        state.users = json.users || [];
+                    }
+
                     lastModifiedTime = file.lastModified;
                     renderCalendar();
                     updateStatus('接続完了', 'connected');
@@ -906,7 +1007,21 @@
             const file = await fileHandle.getFile();
             const text = await file.text();
             lastModifiedTime = file.lastModified;
-            state.events = text ? JSON.parse(text) : [];
+
+            if (text) {
+                const json = JSON.parse(text);
+                if (Array.isArray(json)) {
+                    // Migration from v1 (Array) to v2 (Object)
+                    state.events = json;
+                    state.users = [];
+                } else {
+                    state.events = json.events || [];
+                    state.users = json.users || [];
+                }
+            } else {
+                state.events = [];
+                state.users = [];
+            }
             renderCalendar();
         }
 
@@ -915,7 +1030,12 @@
             try {
                 updateStatus('保存中...', 'syncing');
                 const writable = await fileHandle.createWritable();
-                await writable.write(JSON.stringify(events, null, 2));
+                // Save as object { users, events }
+                const data = {
+                    users: state.users,
+                    events: events
+                };
+                await writable.write(JSON.stringify(data, null, 2));
                 await writable.close();
 
                 const file = await fileHandle.getFile();
@@ -933,10 +1053,33 @@
             try {
                 const file = await fileHandle.getFile();
                 const text = await file.text();
-                let currentEvents = text ? JSON.parse(text) : [];
-                currentEvents = actionCallback(currentEvents);
-                await writeToFile(currentEvents);
-                state.events = currentEvents;
+                let currentData = text ? JSON.parse(text) : { users: [], events: [] };
+
+                // Handle V1 data (array)
+                if (Array.isArray(currentData)) {
+                    currentData = { users: [], events: currentData };
+                }
+
+                // Update events
+                const newEvents = actionCallback(currentData.events);
+
+                // We also need to save the latest user list from state, because adding users is separate
+                // But wait, user addition is also a transaction. 
+                // Let's assume this specific function is for EVENT transaction.
+                // However, let's just use state.users to ensure we don't lose them.
+                // Better approach: allow callback to return full data or just events.
+                // For safety, let's keep it simple: update events in the file, preserve users.
+
+                const newData = {
+                    users: state.users, // Use current state (synced)
+                    events: newEvents
+                };
+
+                await writeToFile(newEvents); // This calls writeToFile which now expects data object logic? 
+                // Wait, writeToFile takes 'events'. I changed writeToFile above to wrap it.
+                // So I just pass newEvents to writeToFile.
+
+                state.events = newEvents;
                 renderCalendar();
             } catch (err) {
                 alert("競合が発生したか、アクセスできませんでした。もう一度試してください。" + err.message);
@@ -1035,7 +1178,14 @@
                 dayEvents.forEach(e => {
                     let catId = resolveCategoryId(e);
                     const cat = CATEGORIES.find(c => c.id === catId) || CATEGORIES[0];
-                    const writerName = e.writer ? `<span class="event-writer">${escapeHtml(e.writer)}</span>` : '';
+                    // Handle writers array or legacy string
+                    let writersStr = '';
+                    if (e.writers && Array.isArray(e.writers)) {
+                        writersStr = e.writers.join(', ');
+                    } else if (e.writer) {
+                        writersStr = e.writer;
+                    }
+                    const writerHtml = writersStr ? `<span class="event-writer">${escapeHtml(writersStr)}</span>` : '';
 
                     eventsHTML += `
                     <div class="event-chip" 
@@ -1045,7 +1195,7 @@
                          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                             ${e.time} ${escapeHtml(e.title)}
                          </span>
-                         ${writerName}
+                         ${writerHtml}
                     </div>
                 `;
                 });
@@ -1082,7 +1232,10 @@
             document.getElementById('eventDate').value = dateStr;
             document.getElementById('eventTime').value = '';
             document.getElementById('eventDesc').value = '';
-            document.getElementById('eventWriter').value = state.writerName || '';
+            document.getElementById('eventDesc').value = '';
+
+            // Render Writer Checkboxes
+            renderWriterCheckboxes([]);
 
             document.querySelector('input[name="category"][value="cat_zen"]').checked = true;
 
@@ -1102,7 +1255,11 @@
             document.getElementById('eventDate').value = evt.date;
             document.getElementById('eventTime').value = evt.time;
             document.getElementById('eventDesc').value = evt.desc;
-            document.getElementById('eventWriter').value = evt.writer || '';
+            document.getElementById('eventDesc').value = evt.desc;
+
+            // Checkboxes
+            const currentWriters = evt.writers || (evt.writer ? [evt.writer] : []);
+            renderWriterCheckboxes(currentWriters);
 
             const catId = resolveCategoryId(evt);
             const radio = document.querySelector(`input[name="category"][value="${catId}"]`) || document.querySelector('input[name="category"][value="cat_zen"]');
@@ -1121,36 +1278,143 @@
             const date = document.getElementById('eventDate').value;
             const time = document.getElementById('eventTime').value;
             const desc = document.getElementById('eventDesc').value;
-            const writer = document.getElementById('eventWriter').value;
+
+            // Collect writers
+            const checkboxes = document.querySelectorAll('#writerCheckboxes input:checked');
+            const writers = Array.from(checkboxes).map(cb => cb.value);
 
             const categoryId = document.querySelector('input[name="category"]:checked').value;
 
             if (!title || !date) { alert('必須項目がありません'); return; }
 
-            if (writer !== state.writerName) {
-                state.writerName = writer;
-                setPref('writerName', writer);
-            }
+            // Writer validation (optional, can be empty)
 
             closeModal();
 
             await saveTransaction((events) => {
+                const eventData = {
+                    title, date, time, desc, writers, categoryId,
+                    userId: categoryId, // Legacy compat
+                    writer: writers.join(', '), // Legacy compat
+                };
+
                 if (editingEventId) {
                     // Update
                     return events.map(e => e.id === editingEventId ? {
-                        ...e, title, date, time, desc, writer, categoryId, updatedAt: Date.now()
+                        ...e, ...eventData, updatedAt: Date.now()
                     } : e);
                 } else {
                     // Create
                     const newEvent = {
                         id: Date.now().toString(36) + Math.random().toString(36).substr(2),
-                        title, date, time, desc, writer, categoryId,
-                        userId: categoryId,
+                        ...eventData,
                         createdAt: Date.now()
                     };
                     return [...events, newEvent];
                 }
             });
+        }
+
+        // --- User Management Logic ---
+        function openUserModal() {
+            renderUserList();
+            document.getElementById('userModal').classList.add('open');
+            setTimeout(() => document.getElementById('newUserName').focus(), 100);
+        }
+
+        function closeUserModal() {
+            document.getElementById('userModal').classList.remove('open');
+        }
+
+        function renderUserList() {
+            const container = document.getElementById('userListDisplay');
+            container.innerHTML = state.users.map((name, idx) => `
+                <div class="user-chip">
+                    ${escapeHtml(name)}
+                    <span class="delete-btn" onclick="deleteUser(${idx})">&times;</span>
+                </div>
+             `).join('');
+        }
+
+        async function addUser() {
+            const input = document.getElementById('newUserName');
+            const name = input.value.trim();
+            if (!name) return;
+
+            if (state.users.length >= 99) {
+                alert('登録人数が上限(99人)に達しています。');
+                return;
+            }
+            if (state.users.includes(name)) {
+                alert('既に登録されています。');
+                return;
+            }
+
+            state.users.push(name);
+            input.value = '';
+            renderUserList();
+
+            // Save immediately
+            if (fileHandle) {
+                // For user updates, we re-read file to avoid event overwrites, 
+                // but simpler to just write full object with current events.
+                try {
+                    const file = await fileHandle.getFile();
+                    const text = await file.text();
+                    let json = text ? JSON.parse(text) : { users: [], events: [] };
+                    if (Array.isArray(json)) json = { users: [], events: json };
+
+                    json.users = state.users;
+
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(JSON.stringify(json, null, 2));
+                    await writable.close();
+                } catch (e) {
+                    console.error(e);
+                    alert('保存できませんでした');
+                }
+            }
+        }
+
+        async function deleteUser(idx) {
+            if (!confirm('このメンバーを削除しますか？')) return;
+            state.users.splice(idx, 1);
+            renderUserList();
+            // Save immediately
+            if (fileHandle) {
+                try {
+                    const file = await fileHandle.getFile();
+                    const text = await file.text();
+                    let json = text ? JSON.parse(text) : { users: [], events: [] };
+                    if (Array.isArray(json)) json = { users: [], events: json };
+
+                    json.users = state.users;
+
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(JSON.stringify(json, null, 2));
+                    await writable.close();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+
+        function renderWriterCheckboxes(selectedWriters) {
+            const container = document.getElementById('writerCheckboxes');
+            if (state.users.length === 0) {
+                container.innerHTML = '<span style="color:#aaa; font-size:0.8rem;">メンバーが登録されていません。<br>「メンバー設定」から追加してください。</span>';
+                return;
+            }
+
+            container.innerHTML = state.users.map(u => {
+                const isChecked = selectedWriters.includes(u);
+                return `
+                <label class="writer-option">
+                    <input type="checkbox" value="${escapeHtml(u)}" ${isChecked ? 'checked' : ''}>
+                    ${escapeHtml(u)}
+                </label>
+            `;
+            }).join('');
         }
 
         async function deleteEvent() {
