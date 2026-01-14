@@ -67,6 +67,7 @@
             font-size: 1.5rem;
             font-weight: 700;
             background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             display: flex;
@@ -261,9 +262,7 @@
             transition: background 0.1s;
         }
 
-        .day-cell:nth-child(7n) {
-            /* No longer needed */
-        }
+
 
         .day-cell:hover {
             filter: brightness(1.2);
@@ -338,6 +337,19 @@
             background: rgba(0, 0, 0, 0.2);
             padding: 0 4px;
             border-radius: 2px;
+        }
+
+        /* --- Event Completed Style --- */
+        .event-chip.completed {
+            opacity: 0.6;
+            text-decoration: line-through;
+            border-style: dashed;
+        }
+
+        .event-chip.completed::after {
+            content: "✓";
+            margin-left: 4px;
+            font-weight: bold;
         }
 
         /* --- Modal --- */
@@ -544,6 +556,71 @@
             margin: 0 auto;
         }
 
+        /* Board View Styles */
+        .board-view {
+            display: none;
+            flex-direction: column;
+            gap: 1rem;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .board-view.active {
+            display: flex;
+        }
+
+        .board-row {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .board-user-label {
+            background: var(--surface-color);
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border-right: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .board-timeline {
+            padding: 0.5rem;
+            min-height: 80px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        /* View Switcher */
+        .view-switcher {
+            display: flex;
+            background: var(--surface-color);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .view-btn {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .view-btn.active {
+            background: var(--primary-color);
+            color: white;
+            font-weight: bold;
+        }
+
         /* Print Styles */
         @media print {
             body {
@@ -661,7 +738,9 @@
             }
 
             .event-chip[data-category="cat_kyu"]::before {
-                content: "【休】";
+                width: 3px;
+                background: white;
+                margin-right: 4px;
             }
 
             .day-cell.today .day-number {
@@ -736,14 +815,16 @@
     </div>
 
     <main id="mainContent">
-        <div class="calendar-header">
-            <div class="controls">
-                <button class="btn btn-icon-only" onclick="changeMonth(-1)">&lt;</button>
-                <button class="btn btn-icon-only" onclick="changeMonth(1)">&gt;</button>
-                <button class="btn" onclick="goToToday()">今日</button>
-            </div>
-            <h2 class="current-month" id="monthLabel">2026年 1月</h2>
-            <div style="width: 120px"></div>
+        <div class="controls">
+            <button class="btn btn-icon-only" onclick="navigateDate(-1)">&lt;</button>
+            <button class="btn btn-icon-only" onclick="navigateDate(1)">&gt;</button>
+            <button class="btn" onclick="goToToday()">今日</button>
+        </div>
+        <h2 class="current-month" id="monthLabel">2026年 1月</h2>
+        <div class="view-switcher">
+            <div class="view-btn active" onclick="switchView('month')" id="btnViewMonth">月</div>
+            <div class="view-btn" onclick="switchView('day')" id="btnViewDay">日</div>
+        </div>
         </div>
 
         <div class="calendar-grid" id="calendarGrid">
@@ -756,6 +837,10 @@
             <div class="weekday">金</div>
             <div class="weekday">土</div>
             <!-- Days injected -->
+        </div>
+
+        <div class="board-view" id="boardView">
+            <!-- Board injected -->
         </div>
     </main>
 
@@ -795,6 +880,12 @@
             <div class="form-group">
                 <label>詳細 / メモ</label>
                 <textarea id="eventDesc" rows="3" placeholder="詳細を入力..."></textarea>
+            </div>
+            <div class="form-group" style="display:flex; align-items:center;">
+                <label style="margin-bottom:0; cursor:pointer; display:flex; align-items:center; gap:0.5rem;">
+                    <input type="checkbox" id="eventCompleted" style="width:20px; height:20px;">
+                    <span>完了としてマーク</span>
+                </label>
             </div>
             <div class="modal-footer">
                 <button class="btn" onclick="deleteEvent()" id="btnDelete"
@@ -841,8 +932,15 @@
             currentDate: new Date(),
             activeFilters: new Set(CATEGORIES.map(c => c.id)),
             users: [], // List of registered names
-            events: []
+            events: [],
+            viewMode: 'month', // 'month' or 'day'
+            lastSelectedCategory: 'cat_zen',
+            lastSelectedWriters: []
         };
+
+        // --- Persistence Constants ---
+        const PREF_LAST_CAT = 'lastSelectedCategory';
+        const PREF_LAST_WRITERS = 'lastSelectedWriters';
 
         let fileHandle = null;
         let filePoller = null;
@@ -930,10 +1028,18 @@
                 }
             }
 
-            // 3. Render
+            // 4. Persistence Load
+            const savedLastCat = await getPref(PREF_LAST_CAT);
+            if (savedLastCat) state.lastSelectedCategory = savedLastCat;
+
+            const savedLastWriters = await getPref(PREF_LAST_WRITERS);
+            if (savedLastWriters) state.lastSelectedWriters = savedLastWriters;
+
+            // 5. Render
             renderFilters();
             renderModalSelector();
             renderCalendar();
+            renderViewSwitcher();
         }
 
         // --- File System Access ---
@@ -985,12 +1091,13 @@
                     const text = await file.text();
                     const json = JSON.parse(text);
 
-                    if (Array.isArray(json)) {
-                        state.events = json;
-                        state.users = [];
-                    } else {
+                    if (json && json.events) {
                         state.events = json.events || [];
                         state.users = json.users || [];
+                    } else {
+                        // Fallback or init
+                        state.events = [];
+                        state.users = [];
                     }
 
                     lastModifiedTime = file.lastModified;
@@ -1009,14 +1116,14 @@
             lastModifiedTime = file.lastModified;
 
             if (text) {
-                const json = JSON.parse(text);
-                if (Array.isArray(json)) {
-                    // Migration from v1 (Array) to v2 (Object)
-                    state.events = json;
-                    state.users = [];
-                } else {
+                try {
+                    const json = JSON.parse(text);
                     state.events = json.events || [];
                     state.users = json.users || [];
+                } catch (e) {
+                    console.error("JSON Parse Error", e);
+                    state.events = [];
+                    state.users = [];
                 }
             } else {
                 state.events = [];
@@ -1055,10 +1162,9 @@
                 const text = await file.text();
                 let currentData = text ? JSON.parse(text) : { users: [], events: [] };
 
-                // Handle V1 data (array)
-                if (Array.isArray(currentData)) {
-                    currentData = { users: [], events: currentData };
-                }
+                // Ensure structure
+                if (!currentData.users) currentData.users = [];
+                if (!currentData.events) currentData.events = [];
 
                 // Update events
                 const newEvents = actionCallback(currentData.events);
@@ -1129,39 +1235,167 @@
         `).join('');
         }
 
+        function switchView(mode) {
+            state.viewMode = mode;
+            renderViewSwitcher();
+            renderCalendar(); // Renders appropriate view
+        }
+
+        function renderViewSwitcher() {
+            document.getElementById('btnViewMonth').className = `view-btn ${state.viewMode === 'month' ? 'active' : ''}`;
+            document.getElementById('btnViewDay').className = `view-btn ${state.viewMode === 'day' ? 'active' : ''}`;
+        }
+
+        function navigateDate(delta) {
+            if (state.viewMode === 'month') {
+                state.currentDate.setMonth(state.currentDate.getMonth() + delta);
+            } else {
+                state.currentDate.setDate(state.currentDate.getDate() + delta);
+            }
+            renderCalendar();
+        }
+
         function renderCalendar() {
             const year = state.currentDate.getFullYear();
             const month = state.currentDate.getMonth();
+            const date = state.currentDate.getDate();
 
-            document.getElementById('monthLabel').textContent = `${year}年 ${month + 1}月`;
+            if (state.viewMode === 'month') {
+                document.getElementById('calendarGrid').style.display = 'grid';
+                document.getElementById('boardView').classList.remove('active');
+                document.getElementById('monthLabel').textContent = `${year}年 ${month + 1}月`;
+                renderMonthView();
+            } else {
+                document.getElementById('calendarGrid').style.display = 'none';
+                document.getElementById('boardView').classList.add('active');
+                document.getElementById('monthLabel').textContent = `${year}年 ${month + 1}月 ${date}日`;
+                renderBoardView();
+            }
+        }
 
+        function renderMonthView() {
+            const year = state.currentDate.getFullYear();
+            const month = state.currentDate.getMonth();
             const firstDay = new Date(year, month, 1);
             const lastDay = new Date(year, month + 1, 0);
-
             const startDayIndex = firstDay.getDay();
             const totalDays = lastDay.getDate();
-
             const grid = document.getElementById('calendarGrid');
             const headers = Array.from(grid.children).slice(0, 7);
             grid.innerHTML = '';
             headers.forEach(h => grid.appendChild(h));
-
             const prevMonthLastDay = new Date(year, month, 0).getDate();
             for (let i = startDayIndex - 1; i >= 0; i--) {
                 grid.innerHTML += createDayHTML(prevMonthLastDay - i, true);
             }
-
             const today = new Date();
             for (let i = 1; i <= totalDays; i++) {
                 const isToday = i === today.getDate() && month === today.getMonth() && year === today.getFullYear();
                 const dayDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
                 grid.innerHTML += createDayHTML(i, false, isToday, dayDateStr);
             }
-
             const remaining = 42 - (startDayIndex + totalDays);
             for (let i = 1; i <= remaining; i++) {
                 grid.innerHTML += createDayHTML(i, true);
             }
+        }
+
+        function renderBoardView() {
+            const container = document.getElementById('boardView');
+            const year = state.currentDate.getFullYear();
+            const month = state.currentDate.getMonth();
+            const day = state.currentDate.getDate();
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+            // Get events for today, filtered
+            const dayEvents = state.events.filter(e => {
+                let catId = resolveCategoryId(e);
+                return e.date === dateStr && state.activeFilters.has(catId);
+            });
+            dayEvents.sort((a, b) => a.time.localeCompare(b.time));
+
+            // Group by User
+            // Events can have multiple writers (e.writers) or single (e.writer)
+            // If e.writers has ['A', 'B'], show in both A and B rows.
+            // If empty, show in Unassigned.
+
+            const userMap = new Map();
+            state.users.forEach(u => userMap.set(u, []));
+            const unassigned = [];
+
+            dayEvents.forEach(e => {
+                let assigned = false;
+                const writers = e.writers || (e.writer ? [e.writer] : []);
+                if (writers.length > 0) {
+                    writers.forEach(w => {
+                        if (userMap.has(w)) {
+                            userMap.get(w).push(e);
+                            assigned = true;
+                        }
+                    });
+                    // If writers exist but not in registry (deleted users), treat as unassigned or legacy? 
+                    // Let's assume legacy names just don't appear in rows unless we add 'Others'.
+                    // For now, only registered users get rows.
+                }
+                if (!assigned && writers.length === 0) {
+                    unassigned.push(e);
+                }
+            });
+
+            let html = '';
+
+            // Render User Rows
+            state.users.forEach(u => {
+                const events = userMap.get(u);
+                const eventHtml = events.map(e => createEventChip(e, true)).join('');
+                html += `
+                <div class="board-row">
+                    <div class="board-user-label">${escapeHtml(u)}</div>
+                    <div class="board-timeline" onclick="openAddModal('${dateStr}', ['${escapeHtml(u)}'])">
+                        ${eventHtml}
+                    </div>
+                </div>`;
+            });
+
+            // Render Unassigned
+            if (unassigned.length > 0) {
+                const eventHtml = unassigned.map(e => createEventChip(e, true)).join('');
+                html += `
+                <div class="board-row">
+                    <div class="board-user-label" style="font-style:italic;">未割り当て</div>
+                    <div class="board-timeline" onclick="openAddModal('${dateStr}')">
+                        ${eventHtml}
+                    </div>
+                </div>`;
+            } else if (state.users.length === 0) {
+                html = `<div style="padding:2rem; text-align:center; color:#aaa;">メンバーが登録されていません。<br>「メンバー設定」から追加してください。</div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Refactored Event Chip Creation
+        function createEventChip(e, showTime = false) {
+            let catId = resolveCategoryId(e);
+            const cat = CATEGORIES.find(c => c.id === catId) || CATEGORIES[0];
+            let writersStr = '';
+
+            if (e.writers && Array.isArray(e.writers)) writersStr = e.writers.join(', ');
+
+            const writerHtml = (writersStr && !showTime) ? `<span class="event-writer">${escapeHtml(writersStr)}</span>` : '';
+            const completedClass = e.completed ? 'completed' : '';
+
+            return `
+                <div class="event-chip ${completedClass}" 
+                        data-category="${cat.id}"
+                        style="background: ${cat.color}"
+                        onclick="openEditModal('${e.id}', event)">
+                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        ${e.time} ${escapeHtml(e.title)}
+                        </span>
+                        ${writerHtml}
+                </div>
+            `;
         }
 
         function createDayHTML(dayNum, isGrey, isToday = false, dateStr = '') {
@@ -1176,28 +1410,7 @@
                 dayEvents.sort((a, b) => a.time.localeCompare(b.time));
 
                 dayEvents.forEach(e => {
-                    let catId = resolveCategoryId(e);
-                    const cat = CATEGORIES.find(c => c.id === catId) || CATEGORIES[0];
-                    // Handle writers array or legacy string
-                    let writersStr = '';
-                    if (e.writers && Array.isArray(e.writers)) {
-                        writersStr = e.writers.join(', ');
-                    } else if (e.writer) {
-                        writersStr = e.writer;
-                    }
-                    const writerHtml = writersStr ? `<span class="event-writer">${escapeHtml(writersStr)}</span>` : '';
-
-                    eventsHTML += `
-                    <div class="event-chip" 
-                         data-category="${cat.id}"
-                         style="background: ${cat.color}"
-                         onclick="openEditModal('${e.id}', event)">
-                         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                            ${e.time} ${escapeHtml(e.title)}
-                         </span>
-                         ${writerHtml}
-                    </div>
-                `;
+                    eventsHTML += createEventChip(e);
                 });
             }
 
@@ -1223,7 +1436,7 @@
 
         // --- Modal Actions ---
 
-        function openAddModal(dateStr) {
+        function openAddModal(dateStr, preselectedWriters = []) {
             if (!fileHandle) { alert("まずは「データファイルを選択」してください。"); return; }
 
             editingEventId = null;
@@ -1232,12 +1445,23 @@
             document.getElementById('eventDate').value = dateStr;
             document.getElementById('eventTime').value = '';
             document.getElementById('eventDesc').value = '';
-            document.getElementById('eventDesc').value = '';
+            document.getElementById('eventCompleted').checked = false;
 
-            // Render Writer Checkboxes
-            renderWriterCheckboxes([]);
+            // Logic for default writers:
+            // 1. If preselected (from board view click), use those.
+            // 2. Else use Saved Preferences.
+            let defaults = [];
+            if (preselectedWriters.length > 0) {
+                defaults = preselectedWriters;
+            } else {
+                defaults = state.lastSelectedWriters || [];
+            }
+            renderWriterCheckboxes(defaults);
 
-            document.querySelector('input[name="category"][value="cat_zen"]').checked = true;
+            // Logic for default category
+            const defCat = state.lastSelectedCategory || 'cat_zen';
+            const radio = document.querySelector(`input[name="category"][value="${defCat}"]`);
+            if (radio) radio.checked = true;
 
             document.getElementById('btnDelete').style.display = 'none';
             document.getElementById('eventModal').classList.add('open');
@@ -1255,7 +1479,7 @@
             document.getElementById('eventDate').value = evt.date;
             document.getElementById('eventTime').value = evt.time;
             document.getElementById('eventDesc').value = evt.desc;
-            document.getElementById('eventDesc').value = evt.desc;
+            document.getElementById('eventCompleted').checked = !!evt.completed;
 
             // Checkboxes
             const currentWriters = evt.writers || (evt.writer ? [evt.writer] : []);
@@ -1278,6 +1502,7 @@
             const date = document.getElementById('eventDate').value;
             const time = document.getElementById('eventTime').value;
             const desc = document.getElementById('eventDesc').value;
+            const completed = document.getElementById('eventCompleted').checked;
 
             // Collect writers
             const checkboxes = document.querySelectorAll('#writerCheckboxes input:checked');
@@ -1287,15 +1512,17 @@
 
             if (!title || !date) { alert('必須項目がありません'); return; }
 
-            // Writer validation (optional, can be empty)
+            // Save Preferences
+            setPref(PREF_LAST_CAT, categoryId);
+            state.lastSelectedCategory = categoryId;
+            setPref(PREF_LAST_WRITERS, writers);
+            state.lastSelectedWriters = writers;
 
             closeModal();
 
             await saveTransaction((events) => {
                 const eventData = {
-                    title, date, time, desc, writers, categoryId,
-                    userId: categoryId, // Legacy compat
-                    writer: writers.join(', '), // Legacy compat
+                    title, date, time, desc, writers, categoryId, completed
                 };
 
                 if (editingEventId) {

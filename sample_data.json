@@ -1,124 +1,101 @@
 {
   "users": [
     "田中",
-    "鈴木",
     "佐藤",
+    "鈴木",
     "高橋",
-    "システム部",
-    "内田"
+    "伊藤",
+    "渡辺",
+    "山本"
   ],
   "events": [
     {
-      "id": "evt_sample_1",
-      "title": "全社ミーティング",
-      "date": "2026-01-12",
+      "id": "evt001",
+      "title": "定例会議",
+      "date": "2026-01-05",
       "time": "10:00",
-      "desc": "月次報告会",
+      "desc": "週次定例",
       "categoryId": "cat_zen",
-      "userId": "cat_zen",
       "writers": [
-        "田中"
+        "田中",
+        "佐藤"
       ],
-      "writer": "田中",
-      "createdAt": 1736490000000
+      "completed": true
     },
     {
-      "id": "evt_sample_2",
-      "title": "サーバーメンテナンス",
-      "date": "2026-01-15",
-      "time": "23:00",
-      "desc": "定期メンテナンス",
-      "categoryId": "cat_sei",
-      "userId": "cat_sei",
-      "writers": [
-        "システム部"
-      ],
-      "writer": "システム部",
-      "createdAt": 1736493600000
-    },
-    {
-      "id": "evt_sample_3",
-      "title": "特別プロジェクト会議",
-      "date": "2026-01-20",
+      "id": "evt002",
+      "title": "A社訪問",
+      "date": "2026-01-06",
       "time": "14:00",
-      "desc": "新製品開発について",
-      "categoryId": "cat_toku",
-      "userId": "cat_toku",
+      "desc": "要件定義書を持参すること",
+      "categoryId": "cat_sei",
       "writers": [
         "鈴木"
       ],
-      "writer": "鈴木",
-      "createdAt": 1736500000000
+      "completed": false
     },
     {
-      "id": "evt_sample_4",
-      "title": "市場調査報告",
-      "date": "2026-01-22",
-      "time": "16:00",
-      "desc": "競合他社分析",
+      "id": "evt003",
+      "title": "資料作成",
+      "date": "2026-01-07",
+      "time": "09:00",
+      "desc": "来週のプレゼン用",
       "categoryId": "cat_cho",
-      "userId": "cat_cho",
       "writers": [
-        "佐藤"
+        "高橋",
+        "伊藤"
       ],
-      "writer": "佐藤",
-      "createdAt": 1736503600000
+      "completed": false
     },
     {
-      "id": "evt_sample_5",
-      "title": "当番: 鍵閉め",
-      "date": "2026-01-25",
-      "time": "18:00",
-      "desc": "最終確認",
+      "id": "evt004",
+      "title": "振替休日",
+      "date": "2026-01-12",
+      "time": "00:00",
+      "desc": "成人の日",
+      "categoryId": "cat_kyu",
+      "writers": [],
+      "completed": false
+    },
+    {
+      "id": "evt005",
+      "title": "消防点検",
+      "date": "2026-01-15",
+      "time": "13:00",
+      "desc": "立会いが必要",
       "categoryId": "cat_tou",
-      "userId": "cat_tou",
       "writers": [
+        "田中"
+      ],
+      "completed": false,
+      "updatedAt": 1768405659752
+    },
+    {
+      "id": "evt006",
+      "title": "社内研修",
+      "date": "2026-01-20",
+      "time": "15:00",
+      "desc": "全社員対象、セキュリティ講習",
+      "categoryId": "cat_zen",
+      "writers": [
+        "田中",
+        "佐藤",
+        "鈴木",
         "高橋"
       ],
-      "writer": "高橋",
-      "createdAt": 1736507200000
+      "completed": false
     },
     {
-      "id": "evt_sample_6",
-      "title": "振替休日",
-      "date": "2026-01-26",
-      "time": "09:00",
-      "desc": "出勤者なし",
-      "categoryId": "cat_kyu",
-      "userId": "cat_kyu",
+      "id": "evt007",
+      "title": "完了済みタスク",
+      "date": "2026-01-10",
+      "time": "11:00",
+      "desc": "これは完了しています",
+      "categoryId": "cat_toku",
       "writers": [
-        "田中"
+        "渡辺"
       ],
-      "writer": "田中",
-      "createdAt": 1736510800000
-    },
-    {
-      "id": "mkctichn5wjj8jtmpe",
-      "title": "休み",
-      "date": "2026-01-08",
-      "time": "",
-      "desc": "",
-      "writers": [
-        "田中"
-      ],
-      "categoryId": "cat_kyu",
-      "userId": "cat_kyu",
-      "writer": "田中",
-      "createdAt": 1768322415803
-    },
-    {
-      "id": "mkctlh9ls4gl5bc722r",
-      "title": "年休",
-      "date": "2026-01-27",
-      "time": "",
-      "desc": "",
-      "writers": [
-        "内田"
-      ],
-      "categoryId": "cat_kyu",
-      "userId": "cat_kyu",
-      "writer": "内田",
-      "createdAt": 1768322561961
+      "completed": true
     }
   ]
 }
