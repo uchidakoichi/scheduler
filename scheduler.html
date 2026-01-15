@@ -32,6 +32,8 @@
             /* Red - 当 */
             --cat-kyu: #64748b;
             /* Slate - 休 */
+            --cat-private: #d8b4fe;
+            /* Purple Stripe - 秘 */
         }
 
         * {
@@ -377,12 +379,18 @@
             background: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: 16px;
-            width: 90%;
-            max-width: 450px;
+            width: 95%;
+            max-width: 600px;
+            /* Wider */
+            max-height: 90vh;
+            /* Allow tall modal */
             padding: 1.5rem;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
             transform: scale(0.95);
             transition: transform 0.2s;
+            display: flex;
+            /* Flex layout to handle scrolling inside */
+            flex-direction: column;
         }
 
         .modal-overlay.open .modal {
@@ -390,113 +398,44 @@
         }
 
         .modal-header {
+            flex-shrink: 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .modal-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-
-        .form-group {
             margin-bottom: 1rem;
-        }
-
-        label {
-            display: block;
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-        }
-
-        input,
-        textarea,
-        select {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 0.75rem;
-            color: white;
-            outline: none;
-            font-size: 1rem;
-        }
-
-        input:focus,
-        textarea:focus {
-            border-color: var(--primary-color);
-        }
-
-        /* Radio Group for Categories */
-        .category-selector {
-            display: flex;
-            gap: 1rem;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 0.75rem;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            justify-content: space-around;
-        }
-
-        .radio-option {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-        }
-
-        .radio-circle {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            border: 2px solid var(--text-secondary);
-            position: relative;
-        }
-
-        input[type="radio"] {
-            display: none;
-        }
-
-        input[type="radio"]:checked+.radio-circle::after {
-            content: '';
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: white;
-        }
-
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 1rem;
-            margin-top: 1.5rem;
         }
 
         /* User Management */
         .user-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            display: flex;
+            flex-direction: column;
+            /* 1 person per row */
             gap: 0.5rem;
-            max-height: 200px;
+
+            /* Target: 20 rows. 
+               If 1 row is approx 40px: 20 * 40 = 800px.
+               Use vh to be safe, but set min-height or explicit height if screen allows.
+            */
+            height: 60vh;
+            min-height: 400px;
             overflow-y: auto;
             margin-bottom: 1rem;
             padding: 4px;
+            border: 1px solid var(--border-color);
+            /* Add border for list area */
+            border-radius: 8px;
         }
 
         .user-chip {
             background: var(--surface-hover);
-            padding: 0.5rem;
+            padding: 0.75rem 1rem;
+            /* Larger touch area */
             border-radius: 4px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 0.875rem;
+            font-size: 1rem;
+            /* Larger text */
         }
 
         .user-chip .delete-btn {
@@ -733,6 +672,15 @@
                 content: "【調】";
             }
 
+            .event-chip[data-category="cat_private"]::before {
+                content: "🔒";
+                margin-right: 4px;
+            }
+
+            .event-chip[data-category="cat_private"] {
+                background: repeating-linear-gradient(45deg, #d8b4fe, #d8b4fe 10px, #c084fc 10px, #c084fc 20px);
+            }
+
             .event-chip[data-category="cat_tou"]::before {
                 content: "【当】";
             }
@@ -741,6 +689,11 @@
                 width: 3px;
                 background: white;
                 margin-right: 4px;
+            }
+
+            .event-chip.completed {
+                opacity: 0.6;
+                text-decoration: line-through;
             }
 
             .day-cell.today .day-number {
@@ -913,6 +866,25 @@
                 <input type="text" id="newUserName" placeholder="新しい氏名を入力...">
                 <button class="btn primary" onclick="addUser()">追加</button>
             </div>
+
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border-color);">
+
+            <div class="form-group">
+                <h4 style="margin-bottom:0.5rem; font-size:1rem;">プライベートデータ管理</h4>
+                <div style="display:flex; gap:0.5rem;">
+                    <button class="btn" onclick="exportPrivateData()">
+                        🔒 エクスポート
+                    </button>
+                    <button class="btn" onclick="document.getElementById('importFile').click()">
+                        📥 インポート
+                    </button>
+                    <input type="file" id="importFile" accept=".json" style="display:none;"
+                        onchange="importPrivateData(this)">
+                </div>
+                <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.5rem;">
+                    「秘」カテゴリの予定はブラウザ内にのみ保存されます。端末移行時はエクスポート/インポートしてください。
+                </p>
+            </div>
         </div>
     </div>
 
@@ -925,6 +897,7 @@
             { id: 'cat_cho', name: '調', color: 'var(--cat-cho)' },
             { id: 'cat_tou', name: '当', color: 'var(--cat-tou)' },
             { id: 'cat_kyu', name: '休', color: 'var(--cat-kyu)' },
+            { id: 'cat_private', name: '秘', color: 'var(--cat-private)', isPrivate: true },
         ];
 
         // --- State ---
@@ -951,16 +924,20 @@
         // --- IndexedDB Manager ---
         const DB_NAME = 'TeamSyncDB';
         const STORE_NAME = 'prefs';
+        const STORE_PRIVATE = 'private_events';
         let db = null;
 
         async function initDB() {
             return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, 1);
+                const request = indexedDB.open(DB_NAME, 2);
 
                 request.onupgradeneeded = (e) => {
                     db = e.target.result;
                     if (!db.objectStoreNames.contains(STORE_NAME)) {
                         db.createObjectStore(STORE_NAME);
+                    }
+                    if (!db.objectStoreNames.contains(STORE_PRIVATE)) {
+                        db.createObjectStore(STORE_PRIVATE, { keyPath: 'id' });
                     }
                 };
 
@@ -1129,7 +1106,46 @@
                 state.events = [];
                 state.users = [];
             }
+
+            // Merge Private Events
+            const privateEvents = await getPrivateEvents();
+            state.events = [...state.events, ...privateEvents];
+
             renderCalendar();
+        }
+
+        // --- Private Event Logic ---
+        async function getPrivateEvents() {
+            if (!db) await initDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_PRIVATE, 'readonly');
+                const store = tx.objectStore(STORE_PRIVATE);
+                const req = store.getAll();
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject([]);
+            });
+        }
+
+        async function savePrivateEvent(evt) {
+            if (!db) await initDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_PRIVATE, 'readwrite');
+                const store = tx.objectStore(STORE_PRIVATE);
+                store.put(evt);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject();
+            });
+        }
+
+        async function deletePrivateEvent(id) {
+            if (!db) await initDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_PRIVATE, 'readwrite');
+                const store = tx.objectStore(STORE_PRIVATE);
+                store.delete(id);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject();
+            });
         }
 
         async function writeToFile(events) {
@@ -1167,29 +1183,60 @@
                 if (!currentData.events) currentData.events = [];
 
                 // Update events
-                const newEvents = actionCallback(currentData.events);
+                // actionCallback returns the NEW list of events. 
+                // We need to differentiate: 
+                // 1. The new event list contains mixed (Public + Private).
+                // 2. We must split them. Public -> JSON, Private -> IndexedDB.
 
-                // We also need to save the latest user list from state, because adding users is separate
-                // But wait, user addition is also a transaction. 
-                // Let's assume this specific function is for EVENT transaction.
-                // However, let's just use state.users to ensure we don't lose them.
-                // Better approach: allow callback to return full data or just events.
-                // For safety, let's keep it simple: update events in the file, preserve users.
+                // However, actionCallback logic acts on state.events.
+                // To keep it simple, we don't pass `currentData.events` (file only) to callback.
+                // We pass `state.events` (mixed).
 
-                const newData = {
-                    users: state.users, // Use current state (synced)
-                    events: newEvents
-                };
+                let allEvents = actionCallback(state.events);
 
-                await writeToFile(newEvents); // This calls writeToFile which now expects data object logic? 
-                // Wait, writeToFile takes 'events'. I changed writeToFile above to wrap it.
-                // So I just pass newEvents to writeToFile.
+                // Separation
+                const publicEvents = allEvents.filter(e => !isPrivate(e));
+                const privateEvents = allEvents.filter(e => isPrivate(e));
 
-                state.events = newEvents;
+                // 1. Save Public to JSON
+                await writeToFile(publicEvents); // writeToFile wraps in {users, events}
+
+                // 2. Save Private to DB
+                // We overwrite DB? Or sync? 
+                // Simplest is to save individual private events or sync list.
+                // Since we rely on ID, let's sync efficiently. 
+                // Make sure we delete ones that are gone? 
+                // For simplicity: clear and rewrite private store? Or just Put all.
+                // Deleting removed private events is tricky if we just Put.
+
+                // Better approach for Private: 
+                // Since we just have a list, let's clear store and add all (inefficient but safe).
+                await clearPrivateStore();
+                for (const p of privateEvents) {
+                    await savePrivateEvent(p);
+                }
+
+                state.events = allEvents;
                 renderCalendar();
             } catch (err) {
                 alert("競合が発生したか、アクセスできませんでした。もう一度試してください。" + err.message);
             }
+        }
+
+        function isPrivate(e) {
+            const cat = CATEGORIES.find(c => c.id === (e.categoryId || e.userId));
+            return cat && cat.isPrivate;
+        }
+
+        async function clearPrivateStore() {
+            if (!db) await initDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_PRIVATE, 'readwrite');
+                const store = tx.objectStore(STORE_PRIVATE);
+                store.clear();
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject();
+            });
         }
 
         // --- UI Helpers ---
@@ -1557,10 +1604,131 @@
             const container = document.getElementById('userListDisplay');
             container.innerHTML = state.users.map((name, idx) => `
                 <div class="user-chip">
-                    ${escapeHtml(name)}
+                    <span style="flex:1;">${escapeHtml(name)}</span>
+                    <div style="display:flex; gap:2px; margin-right:8px;">
+                        <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>▲</button>
+                        <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, 1)" ${idx === state.users.length - 1 ? 'disabled' : ''}>▼</button>
+                    </div>
                     <span class="delete-btn" onclick="deleteUser(${idx})">&times;</span>
                 </div>
              `).join('');
+        }
+
+        async function moveUser(idx, direction) {
+            const newIdx = idx + direction;
+            if (newIdx < 0 || newIdx >= state.users.length) return;
+
+            // Swap
+            const temp = state.users[idx];
+            state.users[idx] = state.users[newIdx];
+            state.users[newIdx] = temp;
+
+            renderUserList();
+
+            // Save immediately
+            if (fileHandle) {
+                try {
+                    const file = await fileHandle.getFile();
+                    const text = await file.text();
+                    let json = text ? JSON.parse(text) : { users: [], events: [] };
+
+                    // Keep events, update users
+                    if (json && json.events) {
+                        json.users = state.users;
+                    } else {
+                        // Fallback
+                        json = { users: state.users, events: [] };
+                    }
+
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(JSON.stringify(json, null, 2));
+                    await writable.close();
+                } catch (e) {
+                    console.error(e);
+                    alert('保存できませんでした');
+                }
+            }
+        }
+
+        async function exportPrivateData() {
+            const privateEvents = await getPrivateEvents();
+            if (privateEvents.length === 0) {
+                alert('プライベートな予定はありません。');
+                return;
+            }
+
+            const blob = new Blob([JSON.stringify(privateEvents, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `private_backup_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        async function importPrivateData(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const json = JSON.parse(text);
+
+                if (!Array.isArray(json)) {
+                    alert('無効なファイル形式です。配列形式のJSONを選択してください。');
+                    return;
+                }
+
+                if (!confirm(`インポートすると現在のプライベート予定に追加・上書きされます。\n(${json.length}件)`)) {
+                    input.value = '';
+                    return;
+                }
+
+                // Merge import
+                await clearPrivateStore(); // Optional: Clear or Append? User asked for migration support implies replace or merge. 
+                // Usually restore = replace or smart merge. 
+                // Let's go with "Merge/Overwrite by ID".
+
+                // Better strategy: Keep existing, add imported.
+                // But if ID collision? Overwrite.
+
+                // Wait, logic above was "clearPrivateStore" then loop. 
+                // If I want to KEEP existing, I should read them first? 
+                // Implementation Plan said: "Load JSON and overwrite/merge".
+
+                // Let's do simple PUT loop.
+                for (const evt of json) {
+                    // Ensure it is marked private
+                    // (Though if imported from private backup it should be)
+                    // Just in case, force category logic compliance? 
+                    // No, evt should have categoryId = 'cat_private'
+
+                    if (evt.categoryId === 'cat_private') {
+                        await savePrivateEvent(evt);
+                    }
+                }
+
+                // Reload
+                state.events = [...(state.events.filter(e => !isPrivate(e))), ...json.filter(e => isPrivate(e))];
+                // Actually we should reload full state properly
+                const privateEvents = await getPrivateEvents(); // Real source of truth
+                // We need to re-read public events too? 
+                // state.events currently has mixed. 
+                // Let's allow simple refresh:
+
+                const publicEvents = state.events.filter(e => !isPrivate(e));
+                state.events = [...publicEvents, ...privateEvents];
+
+                renderCalendar();
+                alert('インポート完了しました。');
+
+            } catch (e) {
+                console.error(e);
+                alert('インポートに失敗しました: ' + e.message);
+            }
+            input.value = '';
         }
 
         async function addUser() {

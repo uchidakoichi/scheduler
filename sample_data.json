@@ -1,101 +1,92 @@
 {
   "users": [
-    "田中",
-    "佐藤",
-    "鈴木",
-    "高橋",
-    "伊藤",
-    "渡辺",
-    "山本"
+    "佐藤 花子",
+    "山田 太郎",
+    "鈴木 一郎",
+    "高橋 優子",
+    "田中 健太",
+    "伊藤 さくら",
+    "渡辺 剛"
   ],
   "events": [
     {
-      "id": "evt001",
-      "title": "定例会議",
-      "date": "2026-01-05",
+      "id": "evt_sample_01",
+      "title": "週次定例会議",
+      "date": "2026-01-14",
       "time": "10:00",
-      "desc": "週次定例",
+      "desc": "プロジェクト進捗確認",
       "categoryId": "cat_zen",
       "writers": [
-        "田中",
-        "佐藤"
+        "山田 太郎",
+        "佐藤 花子"
       ],
-      "completed": true
+      "completed": true,
+      "updatedAt": 1768484000000
     },
     {
-      "id": "evt002",
-      "title": "A社訪問",
-      "date": "2026-01-06",
+      "id": "evt_sample_02",
+      "title": "A社商談",
+      "date": "2026-01-15",
       "time": "14:00",
-      "desc": "要件定義書を持参すること",
+      "desc": "新要件のヒアリング",
       "categoryId": "cat_sei",
       "writers": [
-        "鈴木"
-      ],
-      "completed": false
-    },
-    {
-      "id": "evt003",
-      "title": "資料作成",
-      "date": "2026-01-07",
-      "time": "09:00",
-      "desc": "来週のプレゼン用",
-      "categoryId": "cat_cho",
-      "writers": [
-        "高橋",
-        "伊藤"
-      ],
-      "completed": false
-    },
-    {
-      "id": "evt004",
-      "title": "振替休日",
-      "date": "2026-01-12",
-      "time": "00:00",
-      "desc": "成人の日",
-      "categoryId": "cat_kyu",
-      "writers": [],
-      "completed": false
-    },
-    {
-      "id": "evt005",
-      "title": "消防点検",
-      "date": "2026-01-15",
-      "time": "13:00",
-      "desc": "立会いが必要",
-      "categoryId": "cat_tou",
-      "writers": [
-        "田中"
+        "鈴木 一郎"
       ],
       "completed": false,
-      "updatedAt": 1768405659752
+      "updatedAt": 1768484100000
     },
     {
-      "id": "evt006",
-      "title": "社内研修",
-      "date": "2026-01-20",
-      "time": "15:00",
-      "desc": "全社員対象、セキュリティ講習",
-      "categoryId": "cat_zen",
-      "writers": [
-        "田中",
-        "佐藤",
-        "鈴木",
-        "高橋"
-      ],
-      "completed": false
-    },
-    {
-      "id": "evt007",
-      "title": "完了済みタスク",
-      "date": "2026-01-10",
+      "id": "evt_sample_03",
+      "title": "コードレビュー",
+      "date": "2026-01-16",
       "time": "11:00",
-      "desc": "これは完了しています",
+      "desc": "新機能の実装確認",
+      "categoryId": "cat_cho",
+      "writers": [
+        "高橋 優子",
+        "田中 健太"
+      ],
+      "completed": false,
+      "updatedAt": 1768484200000
+    },
+    {
+      "id": "evt_sample_04",
+      "title": "全社休業日",
+      "date": "2026-01-18",
+      "time": "00:00",
+      "desc": "特別休暇",
+      "categoryId": "cat_kyu",
+      "writers": [],
+      "completed": false,
+      "updatedAt": 1768484300000
+    },
+    {
+      "id": "evt_sample_05",
+      "title": "備品発注",
+      "date": "2026-01-19",
+      "time": "09:30",
+      "desc": "コピー用紙、インク等",
+      "categoryId": "cat_tou",
+      "writers": [
+        "伊藤 さくら"
+      ],
+      "completed": true,
+      "updatedAt": 1768484400000
+    },
+    {
+      "id": "evt_sample_06",
+      "title": "リリース作業",
+      "date": "2026-01-20",
+      "time": "20:00",
+      "desc": "深夜メンテナンス",
       "categoryId": "cat_toku",
       "writers": [
-        "渡辺"
+        "渡辺 剛",
+        "山田 太郎"
       ],
-      "completed": true
+      "completed": false,
+      "updatedAt": 1768484500000
     }
   ]
 }
