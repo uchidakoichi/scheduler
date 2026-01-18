@@ -289,8 +289,30 @@
             color: var(--text-secondary);
             margin-bottom: 0.5rem;
             margin-left: 14px;
-            /* Significantly increased */
             margin-top: 8px;
+        }
+
+        .day-cell.is-saturday .day-number {
+            color: #60a5fa;
+            /* Light Blue */
+        }
+
+        .day-cell.is-sunday .day-number {
+            color: #f87171;
+            /* Light Red */
+        }
+
+        .day-cell.is-holiday .day-number {
+            color: #f87171;
+            /* Light Red */
+        }
+
+        .holiday-name {
+            display: inline-block;
+            font-size: 0.7rem;
+            margin-left: 6px;
+            color: #f87171;
+            font-weight: normal;
         }
 
         .day-cell.today .day-number {
@@ -403,6 +425,90 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem;
+            color: white;
+            outline: none;
+            font-size: 1rem;
+        }
+
+        input:focus,
+        textarea:focus {
+            border-color: var(--primary-color);
+        }
+
+        /* Radio Group for Categories */
+        .category-selector {
+            display: flex;
+            flex-wrap: wrap;
+            /* Fix layout */
+            gap: 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .radio-circle {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid var(--text-secondary);
+            position: relative;
+        }
+
+        input[type="radio"] {
+            display: none;
+        }
+
+        input[type="radio"]:checked+.radio-circle::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: white;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
         }
 
         /* User Management */
@@ -704,6 +810,18 @@
                 height: 20px;
             }
 
+            .day-cell.is-saturday .day-number {
+                color: blue;
+            }
+
+            .day-cell.is-sunday .day-number {
+                color: red;
+            }
+
+            .day-cell.is-holiday .day-number {
+                color: red;
+            }
+
             .day-number {
                 color: black;
                 margin-left: 4px;
@@ -900,11 +1018,119 @@
             { id: 'cat_private', name: '秘', color: 'var(--cat-private)', isPrivate: true },
         ];
 
+        // Holiday Data (2025-2050)
+        const HOLIDAYS = {
+            "2025-04-29": "昭和の日", "2025-05-03": "憲法記念日", "2025-05-04": "みどりの日", "2025-05-05": "こどもの日", "2025-05-06": "振替休日",
+            "2025-07-21": "海の日", "2025-08-11": "山の日", "2025-09-15": "敬老の日", "2025-09-23": "秋分の日", "2025-10-13": "スポーツの日",
+            "2025-11-03": "文化の日", "2025-11-23": "勤労感謝の日", "2025-11-24": "振替休日",
+            "2026-01-01": "元日", "2026-01-12": "成人の日", "2026-02-11": "建国記念の日", "2026-02-23": "天皇誕生日", "2026-03-20": "春分の日",
+            "2026-04-29": "昭和の日", "2026-05-03": "憲法記念日", "2026-05-04": "みどりの日", "2026-05-05": "こどもの日", "2026-05-06": "振替休日",
+            "2026-07-20": "海の日", "2026-08-11": "山の日", "2026-09-21": "敬老の日", "2026-09-22": "国民の休日", "2026-09-23": "秋分の日",
+            "2026-10-12": "スポーツの日", "2026-11-03": "文化の日", "2026-11-23": "勤労感謝の日",
+            "2027-01-01": "元日", "2027-01-11": "成人の日", "2027-02-11": "建国記念の日", "2027-02-23": "天皇誕生日", "2027-03-21": "春分の日",
+            "2027-03-22": "振替休日", "2027-04-29": "昭和の日", "2027-05-03": "憲法記念日", "2027-05-04": "みどりの日", "2027-05-05": "こどもの日",
+            "2027-07-19": "海の日", "2027-08-11": "山の日", "2027-09-20": "敬老の日", "2027-09-23": "秋分の日", "2027-10-11": "スポーツの日",
+            "2027-11-03": "文化の日", "2027-11-23": "勤労感謝の日",
+            "2028-01-01": "元日", "2028-01-10": "成人の日", "2028-02-11": "建国記念の日", "2028-02-23": "天皇誕生日", "2028-03-20": "春分の日",
+            "2028-04-29": "昭和の日", "2028-05-03": "憲法記念日", "2028-05-04": "みどりの日", "2028-05-05": "こどもの日",
+            "2028-07-17": "海の日", "2028-08-11": "山の日", "2028-09-18": "敬老の日", "2028-09-22": "秋分の日", "2028-10-09": "スポーツの日",
+            "2028-11-03": "文化の日", "2028-11-23": "勤労感謝の日",
+            "2029-01-01": "元日", "2029-01-08": "成人の日", "2029-02-11": "建国記念の日", "2029-02-12": "振替休日", "2029-02-23": "天皇誕生日",
+            "2029-03-20": "春分の日", "2029-04-29": "昭和の日", "2029-04-30": "振替休日", "2029-05-03": "憲法記念日", "2029-05-04": "みどりの日",
+            "2029-05-05": "こどもの日", "2029-07-16": "海の日", "2029-08-11": "山の日", "2029-09-17": "敬老の日", "2029-09-23": "秋分の日",
+            "2029-09-24": "振替休日", "2029-10-08": "スポーツの日", "2029-11-03": "文化の日", "2029-11-23": "勤労感謝の日",
+            "2030-01-01": "元日", "2030-01-14": "成人の日", "2030-02-11": "建国記念の日", "2030-02-23": "天皇誕生日", "2030-03-20": "春分の日",
+            "2030-04-29": "昭和の日", "2030-05-03": "憲法記念日", "2030-05-04": "みどりの日", "2030-05-05": "こどもの日", "2030-05-06": "振替休日",
+            "2030-07-15": "海の日", "2030-08-11": "山の日", "2030-08-12": "振替休日", "2030-09-16": "敬老の日", "2030-09-23": "秋分の日",
+            "2030-10-14": "スポーツの日", "2030-11-03": "文化の日", "2030-11-04": "振替休日", "2030-11-23": "勤労感謝の日",
+            "2031-01-01": "元日", "2031-01-13": "成人の日", "2031-02-11": "建国記念の日", "2031-02-23": "天皇誕生日", "2031-02-24": "振替休日",
+            "2031-03-21": "春分の日", "2031-04-29": "昭和の日", "2031-05-03": "憲法記念日", "2031-05-04": "みどりの日", "2031-05-05": "こどもの日",
+            "2031-05-06": "振替休日", "2031-07-21": "海の日", "2031-08-11": "山の日", "2031-09-15": "敬老の日", "2031-09-23": "秋分の日",
+            "2031-10-13": "スポーツの日", "2031-11-03": "文化の日", "2031-11-23": "勤労感謝の日", "2031-11-24": "振替休日",
+            "2032-01-01": "元日", "2032-01-12": "成人の日", "2032-02-11": "建国記念の日", "2032-02-23": "天皇誕生日", "2032-03-20": "春分の日",
+            "2032-04-29": "昭和の日", "2032-05-03": "憲法記念日", "2032-05-04": "みどりの日", "2032-05-05": "こどもの日",
+            "2032-07-19": "海の日", "2032-08-11": "山の日", "2032-09-20": "敬老の日", "2032-09-21": "国民の休日", "2032-09-22": "秋分の日",
+            "2032-10-11": "スポーツの日", "2032-11-03": "文化の日", "2032-11-23": "勤労感謝の日",
+            "2033-01-01": "元日", "2033-01-10": "成人の日", "2033-02-11": "建国記念の日", "2033-02-23": "天皇誕生日", "2033-03-20": "春分の日",
+            "2033-03-21": "振替休日", "2033-04-29": "昭和の日", "2033-05-03": "憲法記念日", "2033-05-04": "みどりの日", "2033-05-05": "こどもの日",
+            "2033-07-18": "海の日", "2033-08-11": "山の日", "2033-09-19": "敬老の日", "2033-09-23": "秋分の日", "2033-10-10": "スポーツの日",
+            "2033-11-03": "文化の日", "2033-11-23": "勤労感謝の日",
+            "2034-01-01": "元日", "2034-01-02": "振替休日", "2034-01-09": "成人の日", "2034-02-11": "建国記念の日", "2034-02-23": "天皇誕生日",
+            "2034-03-20": "春分の日", "2034-04-29": "昭和の日", "2034-05-03": "憲法記念日", "2034-05-04": "みどりの日", "2034-05-05": "こどもの日",
+            "2034-07-17": "海の日", "2034-08-11": "山の日", "2034-09-18": "敬老の日", "2034-09-23": "秋分の日", "2034-10-09": "スポーツの日",
+            "2034-11-03": "文化の日", "2034-11-23": "勤労感謝の日",
+            "2035-01-01": "元日", "2035-01-08": "成人の日", "2035-02-11": "建国記念の日", "2035-02-12": "振替休日", "2035-02-23": "天皇誕生日",
+            "2035-03-21": "春分の日", "2035-04-29": "昭和の日", "2035-04-30": "振替休日", "2035-05-03": "憲法記念日", "2035-05-04": "みどりの日",
+            "2035-05-05": "こどもの日", "2035-07-16": "海の日", "2035-08-11": "山の日", "2035-09-17": "敬老の日", "2035-09-23": "秋分の日",
+            "2035-09-24": "振替休日", "2035-10-08": "スポーツの日", "2035-11-03": "文化の日", "2035-11-23": "勤労感謝の日",
+            "2036-01-01": "元日", "2036-01-14": "成人の日", "2036-02-11": "建国記念の日", "2036-02-23": "天皇誕生日", "2036-03-20": "春分の日",
+            "2036-04-29": "昭和の日", "2036-05-03": "憲法記念日", "2036-05-04": "みどりの日", "2036-05-05": "こどもの日", "2036-05-06": "振替休日",
+            "2036-07-21": "海の日", "2036-08-11": "山の日", "2036-09-15": "敬老の日", "2036-09-22": "秋分の日", "2036-10-13": "スポーツの日",
+            "2036-11-03": "文化の日", "2036-11-23": "勤労感謝の日", "2036-11-24": "振替休日",
+            "2037-01-01": "元日", "2037-01-12": "成人の日", "2037-02-11": "建国記念の日", "2037-02-23": "天皇誕生日", "2037-03-20": "春分の日",
+            "2037-04-29": "昭和の日", "2037-05-03": "憲法記念日", "2037-05-04": "みどりの日", "2037-05-05": "こどもの日", "2037-05-06": "振替休日",
+            "2037-07-20": "海の日", "2037-08-11": "山の日", "2037-09-21": "敬老の日", "2037-09-22": "国民の休日", "2037-09-23": "秋分の日",
+            "2037-10-12": "スポーツの日", "2037-11-03": "文化の日", "2037-11-23": "勤労感謝の日",
+            "2038-01-01": "元日", "2038-01-11": "成人の日", "2038-02-11": "建国記念の日", "2038-02-23": "天皇誕生日", "2038-03-20": "春分の日",
+            "2038-04-29": "昭和の日", "2038-05-03": "憲法記念日", "2038-05-04": "みどりの日", "2038-05-05": "こどもの日",
+            "2038-07-19": "海の日", "2038-08-11": "山の日", "2038-09-20": "敬老の日", "2038-09-23": "秋分の日", "2038-10-11": "スポーツの日",
+            "2038-11-03": "文化の日", "2038-11-23": "勤労感謝の日",
+            "2039-01-01": "元日", "2039-01-10": "成人の日", "2039-02-11": "建国記念の日", "2039-02-23": "天皇誕生日", "2039-03-21": "春分の日",
+            "2039-04-29": "昭和の日", "2039-05-03": "憲法記念日", "2039-05-04": "みどりの日", "2039-05-05": "こどもの日",
+            "2039-07-18": "海の日", "2039-08-11": "山の日", "2039-09-19": "敬老の日", "2039-09-23": "秋分の日", "2039-10-10": "スポーツの日",
+            "2039-11-03": "文化の日", "2039-11-23": "勤労感謝の日",
+            "2040-01-01": "元日", "2040-01-02": "振替休日", "2040-01-09": "成人の日", "2040-02-11": "建国記念の日", "2040-02-23": "天皇誕生日",
+            "2040-03-20": "春分の日", "2040-04-29": "昭和の日", "2040-04-30": "振替休日", "2040-05-03": "憲法記念日", "2040-05-04": "みどりの日",
+            "2040-05-05": "こどもの日", "2040-07-16": "海の日", "2040-08-11": "山の日", "2040-09-17": "敬老の日", "2040-09-22": "秋分の日",
+            "2040-10-08": "スポーツの日", "2040-11-03": "文化の日", "2040-11-23": "勤労感謝の日",
+            "2041-01-01": "元日", "2041-01-14": "成人の日", "2041-02-11": "建国記念の日", "2041-02-23": "天皇誕生日", "2041-03-20": "春分の日",
+            "2041-04-29": "昭和の日", "2041-05-03": "憲法記念日", "2041-05-04": "みどりの日", "2041-05-05": "こどもの日", "2041-05-06": "振替休日",
+            "2041-07-15": "海の日", "2041-08-11": "山の日", "2041-08-12": "振替休日", "2041-09-16": "敬老の日", "2041-09-23": "秋分の日",
+            "2041-10-14": "スポーツの日", "2041-11-03": "文化の日", "2041-11-04": "振替休日", "2041-11-23": "勤労感謝の日",
+            "2042-01-01": "元日", "2042-01-13": "成人の日", "2042-02-11": "建国記念の日", "2042-02-23": "天皇誕生日", "2042-02-24": "振替休日",
+            "2042-03-20": "春分の日", "2042-04-29": "昭和の日", "2042-05-03": "憲法記念日", "2042-05-04": "みどりの日", "2042-05-05": "こどもの日",
+            "2042-05-06": "振替休日", "2042-07-21": "海の日", "2042-08-11": "山の日", "2042-09-15": "敬老の日", "2042-09-23": "秋分の日",
+            "2042-10-13": "スポーツの日", "2042-11-03": "文化の日", "2042-11-23": "勤労感謝の日", "2042-11-24": "振替休日",
+            "2043-01-01": "元日", "2043-01-12": "成人の日", "2043-02-11": "建国記念の日", "2043-02-23": "天皇誕生日", "2043-03-21": "春分の日",
+            "2043-04-29": "昭和の日", "2043-05-03": "憲法記念日", "2043-05-04": "みどりの日", "2043-05-05": "こどもの日", "2043-05-06": "振替休日",
+            "2043-07-20": "海の日", "2043-08-11": "山の日", "2043-09-21": "敬老の日", "2043-09-22": "国民の休日", "2043-09-23": "秋分の日",
+            "2043-10-12": "スポーツの日", "2043-11-03": "文化の日", "2043-11-23": "勤労感謝の日",
+            "2044-01-01": "元日", "2044-01-11": "成人の日", "2044-02-11": "建国記念の日", "2044-02-23": "天皇誕生日", "2044-03-20": "春分の日",
+            "2044-03-21": "振替休日", "2044-04-29": "昭和の日", "2044-05-03": "憲法記念日", "2044-05-04": "みどりの日", "2044-05-05": "こどもの日",
+            "2044-07-18": "海の日", "2044-08-11": "山の日", "2044-09-19": "敬老の日", "2044-09-22": "秋分の日", "2044-10-10": "スポーツの日",
+            "2044-11-03": "文化の日", "2044-11-23": "勤労感謝の日",
+            "2045-01-01": "元日", "2045-01-02": "振替休日", "2045-01-09": "成人の日", "2045-02-11": "建国記念の日", "2045-02-23": "天皇誕生日",
+            "2045-03-20": "春分の日", "2045-04-29": "昭和の日", "2045-05-03": "憲法記念日", "2045-05-04": "みどりの日", "2045-05-05": "こどもの日",
+            "2045-07-17": "海の日", "2045-08-11": "山の日", "2045-09-18": "敬老の日", "2045-09-22": "秋分の日", "2045-10-09": "スポーツの日",
+            "2045-11-03": "文化の日", "2045-11-23": "勤労感謝の日",
+            "2046-01-01": "元日", "2046-01-08": "成人の日", "2046-02-11": "建国記念の日", "2046-02-12": "振替休日", "2046-02-23": "天皇誕生日",
+            "2046-03-20": "春分の日", "2046-04-29": "昭和の日", "2046-04-30": "振替休日", "2046-05-03": "憲法記念日", "2046-05-04": "みどりの日",
+            "2046-05-05": "こどもの日", "2046-07-16": "海の日", "2046-08-11": "山の日", "2046-09-17": "敬老の日", "2046-09-23": "秋分の日",
+            "2046-09-24": "振替休日", "2046-10-08": "スポーツの日", "2046-11-03": "文化の日", "2046-11-23": "勤労感謝の日",
+            "2047-01-01": "元日", "2047-01-14": "成人の日", "2047-02-11": "建国記念の日", "2047-02-23": "天皇誕生日", "2047-03-21": "春分の日",
+            "2047-04-29": "昭和の日", "2047-05-03": "憲法記念日", "2047-05-04": "みどりの日", "2047-05-05": "こどもの日", "2047-05-06": "振替休日",
+            "2047-07-15": "海の日", "2047-08-11": "山の日", "2047-08-12": "振替休日", "2047-09-16": "敬老の日", "2047-09-23": "秋分の日",
+            "2047-10-14": "スポーツの日", "2047-11-03": "文化の日", "2047-11-04": "振替休日", "2047-11-23": "勤労感謝の日",
+            "2048-01-01": "元日", "2048-01-13": "成人の日", "2048-02-11": "建国記念の日", "2048-02-23": "天皇誕生日", "2048-02-24": "振替休日",
+            "2048-03-20": "春分の日", "2048-04-29": "昭和の日", "2048-05-03": "憲法記念日", "2048-05-04": "みどりの日", "2048-05-05": "こどもの日",
+            "2048-05-06": "振替休日", "2048-07-20": "海の日", "2048-08-11": "山の日", "2048-09-21": "敬老の日", "2048-09-22": "秋分の日",
+            "2048-10-12": "スポーツの日", "2048-11-03": "文化の日", "2048-11-23": "勤労感謝の日",
+            "2049-01-01": "元日", "2049-01-11": "成人の日", "2049-02-11": "建国記念の日", "2049-02-23": "天皇誕生日", "2049-03-20": "春分の日",
+            "2049-04-29": "昭和の日", "2049-05-03": "憲法記念日", "2049-05-04": "みどりの日", "2049-05-05": "こどもの日",
+            "2049-07-19": "海の日", "2049-08-11": "山の日", "2049-09-20": "敬老の日", "2049-09-21": "国民の休日", "2049-09-22": "秋分の日",
+            "2049-10-11": "スポーツの日", "2049-11-03": "文化の日", "2049-11-23": "勤労感謝の日",
+            "2050-01-01": "元日", "2050-01-10": "成人の日", "2050-02-11": "建国記念の日", "2050-02-23": "天皇誕生日", "2050-03-20": "春分の日",
+            "2050-03-21": "振替休日", "2050-04-29": "昭和の日", "2050-05-03": "憲法記念日", "2050-05-04": "みどりの日", "2050-05-05": "こどもの日",
+            "2050-07-18": "海の日", "2050-08-11": "山の日", "2050-09-19": "敬老の日", "2050-09-23": "秋分の日", "2050-10-10": "スポーツの日",
+            "2050-11-03": "文化の日", "2050-11-23": "勤労感謝の日",
+        };
+
         // --- State ---
         let state = {
             currentDate: new Date(),
             activeFilters: new Set(CATEGORIES.map(c => c.id)),
-            users: [], // List of registered names
+            users: [], // List of registered names (Master list from file)
+            userOrder: [], // Local preference for order
             events: [],
             viewMode: 'month', // 'month' or 'day'
             lastSelectedCategory: 'cat_zen',
@@ -914,6 +1140,7 @@
         // --- Persistence Constants ---
         const PREF_LAST_CAT = 'lastSelectedCategory';
         const PREF_LAST_WRITERS = 'lastSelectedWriters';
+        const PREF_USER_ORDER = 'userSortOrder';
 
         let fileHandle = null;
         let filePoller = null;
@@ -1091,6 +1318,13 @@
             const file = await fileHandle.getFile();
             const text = await file.text();
             lastModifiedTime = file.lastModified;
+
+            try {
+                // Load local sort order
+                state.userOrder = (await getPref(PREF_USER_ORDER)) || [];
+            } catch (e) {
+                console.warn('DB Load error', e);
+            }
 
             if (text) {
                 try {
@@ -1391,13 +1625,22 @@
 
             let html = '';
 
-            // Render User Rows
-            state.users.forEach(u => {
+            // Render User Rows (using sorted order)
+            const sortedUsers = getSortedUsers();
+
+            sortedUsers.forEach((u, idx) => {
                 const events = userMap.get(u);
                 const eventHtml = events.map(e => createEventChip(e, true)).join('');
+
                 html += `
                 <div class="board-row">
-                    <div class="board-user-label">${escapeHtml(u)}</div>
+                    <div class="board-user-label">
+                        <div style="flex:1;">${escapeHtml(u)}</div>
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <button class="btn btn-icon-only" style="padding:0; width:16px; height:16px; font-size:0.5rem; line-height:1;" onclick="moveUser(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>▲</button>
+                            <button class="btn btn-icon-only" style="padding:0; width:16px; height:16px; font-size:0.5rem; line-height:1;" onclick="moveUser(${idx}, 1)" ${idx === sortedUsers.length - 1 ? 'disabled' : ''}>▼</button>
+                        </div>
+                    </div>
                     <div class="board-timeline" onclick="openAddModal('${dateStr}', ['${escapeHtml(u)}'])">
                         ${eventHtml}
                     </div>
@@ -1447,12 +1690,33 @@
 
         function createDayHTML(dayNum, isGrey, isToday = false, dateStr = '') {
             let eventsHTML = '';
+            let isHoliday = false;
+            let holidayName = '';
+
+            // Determine if weekend or holiday
+            let dayClass = '';
+            let dateObj = null;
 
             if (!isGrey && dateStr) {
+                dateObj = new Date(dateStr);
+                const dayOfWeek = dateObj.getDay(); // 0=Sun, 6=Sat
+
+                if (dayOfWeek === 0) dayClass = 'is-sunday';
+                else if (dayOfWeek === 6) dayClass = 'is-saturday';
+
                 const dayEvents = state.events.filter(e => {
                     let catId = resolveCategoryId(e);
+                    // Manual holiday check removed
                     return e.date === dateStr && state.activeFilters.has(catId);
                 });
+
+                // Check for Static Holiday
+                if (typeof HOLIDAYS !== 'undefined' && HOLIDAYS[dateStr]) {
+                    isHoliday = true;
+                    holidayName = HOLIDAYS[dateStr];
+                }
+
+                if (isHoliday) dayClass = 'is-holiday';
 
                 dayEvents.sort((a, b) => a.time.localeCompare(b.time));
 
@@ -1462,12 +1726,14 @@
             }
 
             return `
-            <div class="day-cell ${isGrey ? 'other-month' : ''} ${isToday ? 'today' : ''}"
+            <div class="day-cell ${isGrey ? 'other-month' : ''} ${isToday ? 'today' : ''} ${dayClass}"
                  ${!isGrey ? `onclick="openAddModal('${dateStr}')"` : ''}>
-                <div class="day-number">${dayNum}</div>
+                <div class="day-number">
+                    ${dayNum}
+                    ${holidayName ? `<span class="holiday-name">${holidayName}</span>` : ''}
+                </div>
                 <div class="events-stack">${eventsHTML}</div>
-            </div>
-        `;
+            </div>`;
         }
 
         // Helper to map old IDs to new ones
@@ -1542,6 +1808,56 @@
 
         function closeModal() {
             document.getElementById('eventModal').classList.remove('open');
+        }
+
+        // Helper to get users in display order
+        function getSortedUsers() {
+            let sorted = [...state.userOrder];
+            const registered = new Set(state.users);
+            const orderedSet = new Set(sorted);
+
+            // Filter invalid (deleted from master)
+            sorted = sorted.filter(u => registered.has(u));
+
+            // Append missing (newly added to master)
+            state.users.forEach(u => {
+                if (!orderedSet.has(u)) sorted.push(u);
+            });
+            return sorted;
+        }
+
+        function renderUserList() {
+            const container = document.getElementById('userListDisplay');
+            if (!container) return; // Guard
+            const displayUsers = getSortedUsers();
+
+            container.innerHTML = displayUsers.map((name, idx) => `
+                <div class="user-chip">
+                    <span style="flex:1;">${escapeHtml(name)}</span>
+                    <div style="display:flex; gap:2px; margin-right:8px;">
+                        <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>▲</button>
+                        <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, 1)" ${idx === displayUsers.length - 1 ? 'disabled' : ''}>▼</button>
+                    </div>
+                    <span class="delete-btn" onclick="deleteUser('${escapeHtml(name)}')">&times;</span>
+                </div>
+             `).join('');
+        }
+
+        async function moveUser(idx, direction) {
+            const displayUsers = getSortedUsers();
+            const newIdx = idx + direction;
+            if (newIdx < 0 || newIdx >= displayUsers.length) return;
+
+            // Swap in local array logic
+            const temp = displayUsers[idx];
+            displayUsers[idx] = displayUsers[newIdx];
+            displayUsers[newIdx] = temp;
+
+            state.userOrder = displayUsers;
+            await setPref(PREF_USER_ORDER, state.userOrder);
+
+            renderUserList();
+            renderCalendar();
         }
 
         async function saveEvent() {
@@ -1771,11 +2087,12 @@
             }
         }
 
-        async function deleteUser(idx) {
+        async function deleteUser(nameRaw) {
             if (!confirm('このメンバーを削除しますか？')) return;
-            state.users.splice(idx, 1);
+            state.users = state.users.filter(u => u !== nameRaw);
             renderUserList();
-            // Save immediately
+
+            // Save immediately (Master list update)
             if (fileHandle) {
                 try {
                     const file = await fileHandle.getFile();
@@ -1796,12 +2113,14 @@
 
         function renderWriterCheckboxes(selectedWriters) {
             const container = document.getElementById('writerCheckboxes');
-            if (state.users.length === 0) {
+            const displayUsers = getSortedUsers(); // Use sorted order
+
+            if (displayUsers.length === 0) {
                 container.innerHTML = '<span style="color:#aaa; font-size:0.8rem;">メンバーが登録されていません。<br>「メンバー設定」から追加してください。</span>';
                 return;
             }
 
-            container.innerHTML = state.users.map(u => {
+            container.innerHTML = displayUsers.map(u => {
                 const isChecked = selectedWriters.includes(u);
                 return `
                 <label class="writer-option">

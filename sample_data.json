@@ -1,7 +1,7 @@
 {
   "users": [
-    "佐藤 花子",
     "山田 太郎",
+    "佐藤 花子",
     "鈴木 一郎",
     "高橋 優子",
     "田中 健太",
@@ -10,83 +10,70 @@
   ],
   "events": [
     {
-      "id": "evt_sample_01",
-      "title": "週次定例会議",
-      "date": "2026-01-14",
+      "id": "sample_001",
+      "title": "週次定例",
+      "date": "2026-01-13",
       "time": "10:00",
-      "desc": "プロジェクト進捗確認",
+      "desc": "定例ミーティング",
       "categoryId": "cat_zen",
       "writers": [
         "山田 太郎",
         "佐藤 花子"
       ],
       "completed": true,
-      "updatedAt": 1768484000000
+      "updatedAt": 1768488000000
     },
     {
-      "id": "evt_sample_02",
-      "title": "A社商談",
-      "date": "2026-01-15",
-      "time": "14:00",
-      "desc": "新要件のヒアリング",
+      "id": "sample_002",
+      "title": "顧客訪問",
+      "date": "2026-01-14",
+      "time": "13:30",
+      "desc": "B社へ訪問、要件ヒアリング",
       "categoryId": "cat_sei",
       "writers": [
         "鈴木 一郎"
       ],
       "completed": false,
-      "updatedAt": 1768484100000
+      "updatedAt": 1768488100000
     },
     {
-      "id": "evt_sample_03",
-      "title": "コードレビュー",
-      "date": "2026-01-16",
-      "time": "11:00",
-      "desc": "新機能の実装確認",
+      "id": "sample_003",
+      "title": "特別休暇",
+      "date": "2026-01-17",
+      "time": "00:00",
+      "desc": "創立記念日",
+      "categoryId": "cat_zen",
+      "writers": [],
+      "completed": false,
+      "updatedAt": 1768742048134
+    },
+    {
+      "id": "sample_004",
+      "title": "資料作成",
+      "date": "2026-01-15",
+      "time": "09:00",
+      "desc": "プレゼン資料のブラッシュアップ",
       "categoryId": "cat_cho",
       "writers": [
         "高橋 優子",
-        "田中 健太"
-      ],
-      "completed": false,
-      "updatedAt": 1768484200000
-    },
-    {
-      "id": "evt_sample_04",
-      "title": "全社休業日",
-      "date": "2026-01-18",
-      "time": "00:00",
-      "desc": "特別休暇",
-      "categoryId": "cat_kyu",
-      "writers": [],
-      "completed": false,
-      "updatedAt": 1768484300000
-    },
-    {
-      "id": "evt_sample_05",
-      "title": "備品発注",
-      "date": "2026-01-19",
-      "time": "09:30",
-      "desc": "コピー用紙、インク等",
-      "categoryId": "cat_tou",
-      "writers": [
         "伊藤 さくら"
       ],
-      "completed": true,
-      "updatedAt": 1768484400000
+      "completed": false,
+      "updatedAt": 1768488300000
     },
     {
-      "id": "evt_sample_06",
-      "title": "リリース作業",
-      "date": "2026-01-20",
-      "time": "20:00",
-      "desc": "深夜メンテナンス",
-      "categoryId": "cat_toku",
+      "id": "sample_005",
+      "title": "緊急メンテ",
+      "date": "2026-01-16",
+      "time": "22:00",
+      "desc": "サーバーメンテナンス",
+      "categoryId": "cat_cho",
       "writers": [
-        "渡辺 剛",
-        "山田 太郎"
+        "田中 健太",
+        "渡辺 剛"
       ],
       "completed": false,
-      "updatedAt": 1768484500000
+      "updatedAt": 1768742059389
     }
   ]
 }
