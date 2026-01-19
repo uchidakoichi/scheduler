@@ -200,9 +200,10 @@
         /* --- Main Calendar --- */
         main {
             flex: 1;
-            display: grid;
-            grid-template-rows: auto 1fr;
-            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            /* Enable vertical scrolling */
             padding: 1rem;
             gap: 1rem;
             opacity: 0.5;
@@ -231,7 +232,8 @@
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: 40px repeat(auto-fill, minmax(100px, 1fr));
+            grid-template-rows: 40px repeat(auto-fill, minmax(120px, auto));
+            /* Dynamic height, min 120px */
             border: 1px solid var(--grid-border);
             border-radius: 12px;
             background: var(--grid-border);
@@ -259,6 +261,8 @@
             /* Opaque cell bg */
             padding: 8px;
             min-height: 120px;
+            min-width: 0;
+            /* Prevent grid blowout */
             position: relative;
             cursor: pointer;
             transition: background 0.1s;
@@ -616,16 +620,19 @@
 
         .board-row {
             display: grid;
-            grid-template-columns: 100px 1fr;
+            grid-template-columns: 11rem 1fr;
+            /* Wider user label ~7 chars */
             background: rgba(0, 0, 0, 0.1);
             border-radius: 8px;
             overflow: hidden;
             border: 1px solid var(--border-color);
+            flex-shrink: 0;
         }
 
         .board-user-label {
             background: var(--surface-color);
-            padding: 1rem;
+            padding: 0.5rem;
+            /* Reduced padding */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1593,7 +1600,13 @@
                 let catId = resolveCategoryId(e);
                 return e.date === dateStr && state.activeFilters.has(catId);
             });
-            dayEvents.sort((a, b) => a.time.localeCompare(b.time));
+            dayEvents.sort((a, b) => {
+                const timeDiff = a.time.localeCompare(b.time);
+                if (timeDiff !== 0) return timeDiff;
+                const catA = CATEGORIES.findIndex(c => c.id === resolveCategoryId(a));
+                const catB = CATEGORIES.findIndex(c => c.id === resolveCategoryId(b));
+                return catA - catB;
+            });
 
             // Group by User
             // Events can have multiple writers (e.writers) or single (e.writer)
@@ -1679,6 +1692,7 @@
                 <div class="event-chip ${completedClass}" 
                         data-category="${cat.id}"
                         style="background: ${cat.color}"
+                        title="${escapeHtml(e.title)}"
                         onclick="openEditModal('${e.id}', event)">
                         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                         ${e.time} ${escapeHtml(e.title)}
@@ -1718,7 +1732,13 @@
 
                 if (isHoliday) dayClass = 'is-holiday';
 
-                dayEvents.sort((a, b) => a.time.localeCompare(b.time));
+                dayEvents.sort((a, b) => {
+                    const timeDiff = a.time.localeCompare(b.time);
+                    if (timeDiff !== 0) return timeDiff;
+                    const catA = CATEGORIES.findIndex(c => c.id === resolveCategoryId(a));
+                    const catB = CATEGORIES.findIndex(c => c.id === resolveCategoryId(b));
+                    return catA - catB;
+                });
 
                 dayEvents.forEach(e => {
                     eventsHTML += createEventChip(e);
@@ -1916,19 +1936,7 @@
             document.getElementById('userModal').classList.remove('open');
         }
 
-        function renderUserList() {
-            const container = document.getElementById('userListDisplay');
-            container.innerHTML = state.users.map((name, idx) => `
-                <div class="user-chip">
-                    <span style="flex:1;">${escapeHtml(name)}</span>
-                    <div style="display:flex; gap:2px; margin-right:8px;">
-                        <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>▲</button>
-                        <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, 1)" ${idx === state.users.length - 1 ? 'disabled' : ''}>▼</button>
-                    </div>
-                    <span class="delete-btn" onclick="deleteUser(${idx})">&times;</span>
-                </div>
-             `).join('');
-        }
+
 
         async function moveUser(idx, direction) {
             const newIdx = idx + direction;
