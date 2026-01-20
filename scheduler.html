@@ -232,8 +232,7 @@
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: 40px repeat(auto-fill, minmax(120px, auto));
-            /* Dynamic height, min 120px */
+            grid-template-rows: 40px repeat(6, auto);
             border: 1px solid var(--grid-border);
             border-radius: 12px;
             background: var(--grid-border);
@@ -260,7 +259,6 @@
             background: var(--surface-color);
             /* Opaque cell bg */
             padding: 8px;
-            min-height: 120px;
             min-width: 0;
             /* Prevent grid blowout */
             position: relative;
@@ -1687,12 +1685,17 @@
 
             const writerHtml = (writersStr && !showTime) ? `<span class="event-writer">${escapeHtml(writersStr)}</span>` : '';
             const completedClass = e.completed ? 'completed' : '';
+            const tooltipTime = e.time ? `[${e.time}] ` : '';
+            const tooltipTitle = e.title;
+            const tooltipWriters = writersStr ? `\n担当: ${writersStr}` : '';
+            const tooltipDesc = e.desc ? `\n詳細: ${e.desc}` : '';
+            const tooltipText = escapeHtml(`${tooltipTime}${tooltipTitle}${tooltipWriters}${tooltipDesc}`);
 
             return `
                 <div class="event-chip ${completedClass}" 
                         data-category="${cat.id}"
                         style="background: ${cat.color}"
-                        title="${escapeHtml(e.title)}"
+                        title="${tooltipText}"
                         onclick="openEditModal('${e.id}', event)">
                         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                         ${e.time} ${escapeHtml(e.title)}
@@ -1858,7 +1861,7 @@
                         <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>▲</button>
                         <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, 1)" ${idx === displayUsers.length - 1 ? 'disabled' : ''}>▼</button>
                     </div>
-                    <span class="delete-btn" onclick="deleteUser('${escapeHtml(name)}')">&times;</span>
+                    <span class="delete-btn" onclick='deleteUser(${JSON.stringify(name)})'>&times;</span>
                 </div>
              `).join('');
         }
@@ -1937,42 +1940,6 @@
         }
 
 
-
-        async function moveUser(idx, direction) {
-            const newIdx = idx + direction;
-            if (newIdx < 0 || newIdx >= state.users.length) return;
-
-            // Swap
-            const temp = state.users[idx];
-            state.users[idx] = state.users[newIdx];
-            state.users[newIdx] = temp;
-
-            renderUserList();
-
-            // Save immediately
-            if (fileHandle) {
-                try {
-                    const file = await fileHandle.getFile();
-                    const text = await file.text();
-                    let json = text ? JSON.parse(text) : { users: [], events: [] };
-
-                    // Keep events, update users
-                    if (json && json.events) {
-                        json.users = state.users;
-                    } else {
-                        // Fallback
-                        json = { users: state.users, events: [] };
-                    }
-
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(JSON.stringify(json, null, 2));
-                    await writable.close();
-                } catch (e) {
-                    console.error(e);
-                    alert('保存できませんでした');
-                }
-            }
-        }
 
         async function exportPrivateData() {
             const privateEvents = await getPrivateEvents();
@@ -2096,8 +2063,9 @@
         }
 
         async function deleteUser(nameRaw) {
-            if (!confirm('このメンバーを削除しますか？')) return;
+            if (!confirm(`メンバー「${nameRaw}」を削除しますか？`)) return;
             state.users = state.users.filter(u => u !== nameRaw);
+            state.userOrder = state.userOrder.filter(u => u !== nameRaw);
             renderUserList();
 
             // Save immediately (Master list update)
