@@ -204,8 +204,10 @@
             flex-direction: column;
             overflow-y: auto;
             /* Enable vertical scrolling */
-            padding: 1rem;
-            gap: 1rem;
+            padding: 0;
+            /* Removed padding for sticky header */
+            gap: 0;
+            /* Handled by children padding/margin */
             opacity: 0.5;
             pointer-events: none;
             /* Disabled until DB connected */
@@ -222,8 +224,15 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 1rem;
+            padding: 1rem;
             flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid transparent;
+            /* Optional transition for border */
         }
 
         .current-month {
@@ -235,15 +244,15 @@
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             grid-template-rows: 40px repeat(6, minmax(120px, auto));
-            /* Dynamic height, min 120px, always 6 rows */
+            /* Dynamic height */
             border: 1px solid var(--grid-border);
             border-radius: 12px;
             background: var(--grid-border);
-            /* Lines color */
             gap: 1px;
-            /* The lines */
             overflow: visible;
             flex-shrink: 0;
+            margin: 1rem;
+            /* Add margin since main has no padding */
         }
 
         .weekday {
@@ -896,16 +905,17 @@
     </div>
 
     <main id="mainContent">
-        <div class="controls">
-            <button class="btn btn-icon-only" onclick="navigateDate(-1)">&lt;</button>
-            <button class="btn btn-icon-only" onclick="navigateDate(1)">&gt;</button>
-            <button class="btn" onclick="goToToday()">今日</button>
-        </div>
-        <h2 class="current-month" id="monthLabel">2026年 1月</h2>
-        <div class="view-switcher">
-            <div class="view-btn active" onclick="switchView('month')" id="btnViewMonth">月</div>
-            <div class="view-btn" onclick="switchView('day')" id="btnViewDay">日</div>
-        </div>
+        <div class="calendar-header">
+            <div class="controls">
+                <button class="btn btn-icon-only" onclick="navigateDate(-1)">&lt;</button>
+                <button class="btn btn-icon-only" onclick="navigateDate(1)">&gt;</button>
+                <button class="btn" onclick="goToToday()">今日</button>
+            </div>
+            <h2 class="current-month" id="monthLabel">2026年 1月</h2>
+            <div class="view-switcher">
+                <div class="view-btn active" onclick="switchView('month')" id="btnViewMonth">月</div>
+                <div class="view-btn" onclick="switchView('day')" id="btnViewDay">日</div>
+            </div>
         </div>
 
         <div class="calendar-grid" id="calendarGrid">
