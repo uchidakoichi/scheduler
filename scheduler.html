@@ -210,6 +210,7 @@
             pointer-events: none;
             /* Disabled until DB connected */
             transition: opacity 0.3s;
+            min-height: 0;
         }
 
         main.active {
@@ -222,6 +223,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 0 1rem;
+            flex-shrink: 0;
         }
 
         .current-month {
@@ -232,15 +234,16 @@
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: 40px repeat(auto-fill, minmax(120px, auto));
-            /* Dynamic height, min 120px */
+            grid-template-rows: 40px repeat(6, minmax(120px, auto));
+            /* Dynamic height, min 120px, always 6 rows */
             border: 1px solid var(--grid-border);
             border-radius: 12px;
             background: var(--grid-border);
             /* Lines color */
             gap: 1px;
             /* The lines */
-            overflow: hidden;
+            overflow: visible;
+            flex-shrink: 0;
         }
 
         .weekday {
@@ -260,7 +263,7 @@
             background: var(--surface-color);
             /* Opaque cell bg */
             padding: 8px;
-            min-height: 120px;
+            /* min-height is controlled by grid row */
             min-width: 0;
             /* Prevent grid blowout */
             position: relative;
@@ -1246,6 +1249,20 @@
             const savedLastWriters = await getPref(PREF_LAST_WRITERS);
             if (savedLastWriters) state.lastSelectedWriters = savedLastWriters;
 
+            // Check for saved file handle
+            try {
+                const savedHandle = await getPref('lastFileHandle');
+                if (savedHandle) {
+                    const btn = document.querySelector('#introBarrier .btn');
+                    btn.textContent = '再接続: ' + savedHandle.name;
+                    btn.onclick = () => reconnectDatabase(savedHandle);
+
+                    const headBtn = document.getElementById('btnConnect');
+                    headBtn.textContent = '再接続: ' + savedHandle.name;
+                    headBtn.onclick = () => reconnectDatabase(savedHandle);
+                }
+            } catch (e) { console.warn('No saved handle', e); }
+
             // 5. Render
             renderFilters();
             renderModalSelector();
@@ -1262,12 +1279,14 @@
                         types: [{ description: 'Scheduler Data JSON', accept: { 'application/json': ['.json'] } }],
                         multiple: false
                     });
+                    await setPref('lastFileHandle', fileHandle); // Save handle
                 } catch (e) {
                     if (confirm("既存ファイルが見つかりませんか？新しいデータファイルを作成しますか？")) {
                         fileHandle = await window.showSaveFilePicker({
                             suggestedName: 'scheduler_data.json',
                             types: [{ description: 'Scheduler Data JSON', accept: { 'application/json': ['.json'] } }]
                         });
+                        await setPref('lastFileHandle', fileHandle); // Save handle
                         state.events = [];
                         await writeToFile(state.events);
                     } else {
@@ -1290,6 +1309,38 @@
             } catch (err) {
                 console.error(err);
                 if (err.name !== 'AbortError') alert('接続エラー: ' + err.message);
+            }
+        }
+
+        async function reconnectDatabase(handle) {
+            try {
+                const opts = { mode: 'readwrite' };
+                if ((await handle.queryPermission(opts)) !== 'granted') {
+                    if ((await handle.requestPermission(opts)) !== 'granted') {
+                        alert('許可されませんでした。');
+                        return;
+                    }
+                }
+
+                fileHandle = handle;
+                await loadFromFile();
+
+                if (filePoller) clearInterval(filePoller);
+                filePoller = setInterval(checkFileUpdates, 3000);
+
+                document.getElementById('introBarrier').style.display = 'none';
+                document.getElementById('mainContent').classList.add('active');
+                document.getElementById('btnConnect').textContent = '接続済み: ' + fileHandle.name;
+                document.getElementById('btnConnect').classList.add('success');
+                document.getElementById('btnConnect').classList.remove('primary');
+                document.getElementById('btnConnect').onclick = connectDatabase;
+
+                updateStatus('接続完了', 'connected');
+
+            } catch (e) {
+                console.error(e);
+                alert('再接続に失敗しました: ' + e.message);
+                connectDatabase();
             }
         }
 
@@ -1846,6 +1897,77 @@
             return sorted;
         }
 
+        async function editUser(oldName) {
+            const newName = prompt('修正後の氏名を入力してください:', oldName);
+            if (!newName || newName === oldName) return;
+
+            if (state.users.includes(newName)) {
+                alert('その名前は既に使用されています。');
+                return;
+            }
+
+            // Update Users List
+            const idx = state.users.indexOf(oldName);
+            if (idx !== -1) {
+                state.users[idx] = newName;
+            }
+
+            // Update Sort Order
+            const sortIdx = state.userOrder.indexOf(oldName);
+            if (sortIdx !== -1) {
+                state.userOrder[sortIdx] = newName;
+                await setPref(PREF_USER_ORDER, state.userOrder);
+            }
+
+            // Update All Events
+            const newEvents = state.events.map(e => {
+                let changed = false;
+                let newWriters = e.writers;
+
+                // Rename in 'writers' array
+                if (e.writers && e.writers.includes(oldName)) {
+                    newWriters = e.writers.map(w => w === oldName ? newName : w);
+                    changed = true;
+                }
+
+                // Rename single 'writer' (legacy support)
+                let newWriter = e.writer;
+                if (e.writer === oldName) {
+                    newWriter = newName;
+                    changed = true;
+                }
+
+                if (changed) {
+                    return { ...e, writers: newWriters, writer: newWriter, updatedAt: Date.now() };
+                }
+                return e;
+            });
+
+            state.events = newEvents;
+            renderUserList();
+            renderCalendar();
+
+            // Save actions
+            if (fileHandle) {
+                await saveTransaction((currentEvents) => {
+                    return currentEvents.map(e => {
+                        let newWriters = e.writers;
+                        if (e.writers && e.writers.includes(oldName)) {
+                            newWriters = e.writers.map(w => w === oldName ? newName : w);
+                        }
+                        let newWriter = e.writer;
+                        if (e.writer === oldName) {
+                            newWriter = newName;
+                        }
+                        if (JSON.stringify(newWriters) !== JSON.stringify(e.writers) || newWriter !== e.writer) {
+                            return { ...e, writers: newWriters, writer: newWriter, updatedAt: Date.now() };
+                        }
+                        return e;
+                    });
+                });
+            }
+        }
+
         function renderUserList() {
             const container = document.getElementById('userListDisplay');
             if (!container) return; // Guard
@@ -1858,7 +1980,10 @@
                         <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>▲</button>
                         <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, 1)" ${idx === displayUsers.length - 1 ? 'disabled' : ''}>▼</button>
                     </div>
-                    <span class="delete-btn" onclick="deleteUser('${escapeHtml(name)}')">&times;</span>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button class="btn btn-icon-only" style="padding:4px; font-size:0.8rem; height:auto;" onclick="editUser('${escapeHtml(name)}')" title="名前を修正">✏️</button>
+                        <span class="delete-btn" onclick="deleteUser('${escapeHtml(name)}')">&times;</span>
+                    </div>
                 </div>
              `).join('');
         }
