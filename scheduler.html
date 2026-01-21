@@ -687,12 +687,20 @@
 
         /* Print Styles */
         @media print {
+            @page {
+                size: A4 landscape;
+                margin: 5mm;
+            }
+
             body {
                 background: white;
-                color: black;
+                color: black !important;
                 height: auto;
                 overflow: visible;
                 display: block;
+                font-size: 10pt;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
 
             /* Hide interactive/non-essential elements */
@@ -701,13 +709,9 @@
             .modal-overlay,
             .controls,
             .filter-group,
-            .btn {
+            .btn,
+            .view-switcher {
                 display: none !important;
-            }
-
-            /* Helper: spacing for the month header */
-            .calendar-header div[style*="width: 120px"] {
-                display: none;
             }
 
             /* Main Layout */
@@ -716,17 +720,24 @@
                 opacity: 1 !important;
                 padding: 0;
                 margin: 0;
+                overflow: visible !important;
             }
 
             .calendar-header {
                 justify-content: center;
-                margin: 0 0 1rem 0;
+                margin: 0 0 0.5rem 0;
                 padding: 0;
+            }
+
+            /* Helper: spacing for the month header */
+            .calendar-header div[style*="width: 120px"],
+            .calendar-header .controls {
+                display: none !important;
             }
 
             .current-month {
                 color: black;
-                font-size: 1.8rem;
+                font-size: 1.2rem;
                 margin: 0;
             }
 
@@ -736,121 +747,131 @@
                 background: transparent;
                 gap: 0;
                 display: grid;
-                /* Maintain grid layout */
+                /* Reset explicit row heights for print - use auto to fit content */
+                grid-template-rows: 20px repeat(6, auto) !important;
+                height: auto !important;
+                page-break-inside: auto;
             }
 
             .weekday {
                 background: #eee !important;
-                /* Force light grey */
-                color: black;
+                color: black !important;
                 border: 1px solid #000;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                font-size: 0.8rem;
+                height: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
 
             .day-cell {
                 background: white !important;
                 border: 1px solid #000;
-                min-height: auto;
-                /* Allow height to adjust */
-                height: 100px;
+                min-height: 80px;
+                /* Ensure some height */
+                height: auto !important;
+                /* Grow with content */
                 page-break-inside: avoid;
+                padding: 2px;
+                overflow: visible !important;
             }
 
             .day-cell.other-month {
-                background: #f4f4f4 !important;
+                background: #f9f9f9 !important;
                 opacity: 1;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+            }
+
+            .day-number {
+                font-size: 0.7rem;
+                margin: 0 0 2px 2px;
+                color: black !important;
+            }
+
+            /* Holiday/Weekend Colors Override to Black for strict B/W request? 
+               User said "印刷時の文字色は黒1色" (Text color black single color). 
+               But usually dates are okay to be distinctive if greyscale. 
+               However, strictly interpreting "Text color is black 1 color".
+            */
+            .day-cell.is-saturday .day-number,
+            .day-cell.is-sunday .day-number,
+            .day-cell.is-holiday .day-number {
+                color: black !important;
+            }
+
+            .holiday-name {
+                color: black !important;
+                font-size: 0.6rem;
+            }
+
+            .day-cell.today .day-number {
+                background: transparent !important;
+                color: black !important;
+                border: 1px solid black;
             }
 
             /* Event Styling */
             .event-chip {
-                background: white !important;
+                background: transparent !important;
                 color: black !important;
-                border: 1px solid #000;
+                border: none !important;
+                /* Minimal look to save space */
                 box-shadow: none;
                 margin-bottom: 2px;
-                padding: 1px 2px;
-                font-size: 0.7rem;
+                padding: 0;
+                font-size: 0.65rem !important;
+                /* Small font */
+                line-height: 1.1;
+
+                /* Wrap text */
+                white-space: normal !important;
+                height: auto !important;
+                display: block !important;
+                max-height: none !important;
             }
 
-            /* Category Prefixes */
+            /* Hide Category Prefixes (User Requirement 1) */
             .event-chip::before {
-                font-weight: bold;
-                margin-right: 2px;
+                content: none !important;
+                display: none !important;
             }
 
-            .event-chip[data-category="cat_zen"]::before {
-                content: "【全】";
-            }
-
-            .event-chip[data-category="cat_sei"]::before {
-                content: "【整】";
-            }
-
-            .event-chip[data-category="cat_toku"]::before {
-                content: "【特】";
-            }
-
-            .event-chip[data-category="cat_cho"]::before {
-                content: "【調】";
-            }
-
-            .event-chip[data-category="cat_private"]::before {
-                content: "🔒";
-                margin-right: 4px;
-            }
-
+            /* Hide Background patterns/colors */
             .event-chip[data-category="cat_private"] {
-                background: repeating-linear-gradient(45deg, #d8b4fe, #d8b4fe 10px, #c084fc 10px, #c084fc 20px);
-            }
-
-            .event-chip[data-category="cat_tou"]::before {
-                content: "【当】";
-            }
-
-            .event-chip[data-category="cat_kyu"]::before {
-                width: 3px;
-                background: white;
-                margin-right: 4px;
-            }
-
-            .event-chip.completed {
-                opacity: 0.6;
-                text-decoration: line-through;
-            }
-
-            .day-cell.today .day-number {
-                background: transparent;
-                color: black;
-                border: 2px solid black;
-                width: 20px;
-                height: 20px;
-            }
-
-            .day-cell.is-saturday .day-number {
-                color: blue;
-            }
-
-            .day-cell.is-sunday .day-number {
-                color: red;
-            }
-
-            .day-cell.is-holiday .day-number {
-                color: red;
-            }
-
-            .day-number {
-                color: black;
-                margin-left: 4px;
-                margin-top: 4px;
+                background: transparent !important;
             }
 
             .event-writer {
-                border: 1px solid #aaa;
-                background: transparent;
-                color: #333;
+                background: transparent !important;
+                border: none !important;
+                color: black !important;
+                font-weight: bold;
+                margin-right: 2px;
+                font-size: inherit;
+                display: inline;
+                padding: 0;
+            }
+
+            /* Construct the layout: Time + Writer + Title */
+            .event-chip {
+                border-bottom: 1px dotted #ccc !important;
+                padding-bottom: 1px;
+            }
+
+            /* Ensure inner spans (Title/Time) wraps and overrides inline styles */
+            .event-chip span {
+                white-space: normal !important;
+                overflow: visible !important;
+                text-overflow: unset !important;
+            }
+
+            .event-chip .event-time {
+                /* If we had a time span, but currently it's just text in the chip? 
+                   We need to see how event chip HTML is built.
+                   Assuming the text is inside.
+                */
+                display: inline;
+                font-weight: bold;
+                margin-right: 2px;
             }
         }
     </style>
