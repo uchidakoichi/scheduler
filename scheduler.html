@@ -18,6 +18,9 @@
             --danger-color: #ef4444;
             --success-color: #10b981;
             --grid-border: rgba(255, 255, 255, 0.1);
+            --header-bg: rgba(15, 23, 42, 0.8);
+            --modal-bg: rgba(0, 0, 0, 0.6);
+            --input-bg: rgba(0, 0, 0, 0.2);
 
             /* Category Colors */
             --cat-zen: #3b82f6;
@@ -34,6 +37,21 @@
             /* Slate - 休 */
             --cat-private: #d8b4fe;
             /* Purple Stripe - 秘 */
+        }
+
+        :root.light-mode {
+            --bg-color: #f1f5f9;
+            --surface-color: #ffffff;
+            --surface-hover: #e2e8f0;
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --border-color: #cbd5e1;
+            --grid-border: rgba(0, 0, 0, 0.1);
+            --header-bg: rgba(241, 245, 249, 0.8);
+            --modal-bg: rgba(0, 0, 0, 0.4);
+            --input-bg: #f8fafc;
         }
 
         * {
@@ -55,7 +73,7 @@
 
         /* --- Header --- */
         header {
-            background: rgba(15, 23, 42, 0.8);
+            background: var(--header-bg);
             backdrop-filter: blur(16px);
             border-bottom: 1px solid var(--border-color);
             padding: 1rem 2rem;
@@ -153,8 +171,8 @@
         .filter-btn.active {
             opacity: 1;
             transform: scale(1.1);
-            border-color: white;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+            border-color: var(--text-primary);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
         /* Status Bar */
@@ -229,7 +247,7 @@
             position: sticky;
             top: 0;
             z-index: 5;
-            background: rgba(15, 23, 42, 0.95);
+            background: var(--header-bg);
             backdrop-filter: blur(8px);
             border-bottom: 1px solid transparent;
             /* Optional transition for border */
@@ -399,7 +417,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
+            background: var(--modal-bg);
             backdrop-filter: blur(4px);
             display: none;
             place-items: center;
@@ -463,11 +481,11 @@
         textarea,
         select {
             width: 100%;
-            background: rgba(0, 0, 0, 0.2);
+            background: var(--input-bg);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 0.75rem;
-            color: white;
+            color: var(--text-primary);
             outline: none;
             font-size: 1rem;
         }
@@ -483,7 +501,7 @@
             flex-wrap: wrap;
             /* Fix layout */
             gap: 0.75rem;
-            background: rgba(0, 0, 0, 0.2);
+            background: var(--input-bg);
             padding: 0.75rem;
             border-radius: 8px;
             border: 1px solid var(--border-color);
@@ -570,12 +588,12 @@
         /* Checkbox Grid for Writers */
         .writer-checkboxes {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 0.5rem;
-            max-height: 150px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            max-height: 400px;
             overflow-y: auto;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 0.5rem;
+            background: var(--input-bg);
+            padding: 0.75rem;
             border-radius: 8px;
             border: 1px solid var(--border-color);
         }
@@ -583,14 +601,23 @@
         .writer-option {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 0.85rem;
+            gap: 10px;
+            font-size: 1rem;
             cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.1s;
+        }
+
+        .writer-option:hover {
+            background: var(--surface-hover);
         }
 
         .writer-option input {
-            width: auto;
+            width: 20px;
+            height: 20px;
             margin: 0;
+            cursor: pointer;
         }
 
         /* Intro Barrier */
@@ -901,6 +928,26 @@
                 <!-- Injected by JS -->
             </div>
 
+            <button class="btn" onclick="toggleTheme()" id="btnTheme" title="テーマ切り替え">
+                <svg id="themeIconSun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" style="display:none;">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <svg id="themeIconMoon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <span>テーマ</span>
+            </button>
+
             <button class="btn" onclick="openUserModal()" id="btnUsers">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -1175,8 +1222,29 @@
             events: [],
             viewMode: 'month', // 'month' or 'day'
             lastSelectedCategory: 'cat_zen',
-            lastSelectedWriters: []
+            lastSelectedWriters: [],
+            theme: 'dark'
         };
+
+        // --- Theme Management ---
+        async function initTheme() {
+            const savedTheme = await getPref('theme') || 'dark';
+            state.theme = savedTheme;
+            applyTheme();
+        }
+
+        function toggleTheme() {
+            state.theme = state.theme === 'dark' ? 'light' : 'dark';
+            setPref('theme', state.theme);
+            applyTheme();
+        }
+
+        function applyTheme() {
+            const isLight = state.theme === 'light';
+            document.documentElement.classList.toggle('light-mode', isLight);
+            document.getElementById('themeIconSun').style.display = isLight ? 'block' : 'none';
+            document.getElementById('themeIconMoon').style.display = isLight ? 'none' : 'block';
+        }
 
         // --- Persistence Constants ---
         const PREF_LAST_CAT = 'lastSelectedCategory';
@@ -1244,6 +1312,9 @@
 
         async function init() {
             await initDB();
+
+            // 0. Theme
+            await initTheme();
 
             // 1. Writer Name
             const search = window.location.search;
