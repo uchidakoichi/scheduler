@@ -243,8 +243,7 @@
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: 40px repeat(6, minmax(120px, auto));
-            /* Dynamic height */
+            grid-auto-rows: minmax(100px, auto);
             border: 1px solid var(--grid-border);
             border-radius: 12px;
             background: var(--grid-border);
@@ -1770,11 +1769,13 @@
             const writerHtml = (writersStr && !showTime) ? `<span class="event-writer">${escapeHtml(writersStr)}</span>` : '';
             const completedClass = e.completed ? 'completed' : '';
 
+            const tooltip = `${e.time || ''} ${e.title} ${writersStr ? `(${writersStr})` : ''}`.trim();
+
             return `
                 <div class="event-chip ${completedClass}" 
                         data-category="${cat.id}"
                         style="background: ${cat.color}"
-                        title="${escapeHtml(e.title)}"
+                        title="${escapeHtml(tooltip)}"
                         onclick="openEditModal('${e.id}', event)">
                         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                         ${e.time} ${escapeHtml(e.title)}
@@ -2012,8 +2013,8 @@
                         <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, 1)" ${idx === displayUsers.length - 1 ? 'disabled' : ''}>▼</button>
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <button class="btn btn-icon-only" style="padding:4px; font-size:0.8rem; height:auto;" onclick="editUser('${escapeHtml(name)}')" title="名前を修正">✏️</button>
-                        <span class="delete-btn" onclick="deleteUser('${escapeHtml(name)}')">&times;</span>
+                        <button class="btn btn-icon-only" style="padding:4px; font-size:0.8rem; height:auto;" onclick='editUser(${JSON.stringify(name)})' title="名前を修正">✏️</button>
+                        <span class="delete-btn" onclick='deleteUser(${JSON.stringify(name)})'>&times;</span>
                     </div>
                 </div>
              `).join('');
