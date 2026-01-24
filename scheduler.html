@@ -261,7 +261,7 @@
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: 40px repeat(6, minmax(120px, auto));
+            grid-template-rows: 40px repeat(6, auto);
             /* Dynamic height */
             border: 1px solid var(--grid-border);
             border-radius: 12px;
@@ -1807,7 +1807,7 @@
                             <button class="btn btn-icon-only" style="padding:0; width:16px; height:16px; font-size:0.5rem; line-height:1;" onclick="moveUser(${idx}, 1)" ${idx === sortedUsers.length - 1 ? 'disabled' : ''}>▼</button>
                         </div>
                     </div>
-                    <div class="board-timeline" onclick="openAddModal('${dateStr}', ['${escapeHtml(u)}'])">
+                    <div class="board-timeline" onclick='openAddModal(${JSON.stringify(dateStr)}, [${JSON.stringify(u)}])'>
                         ${eventHtml}
                     </div>
                 </div>`;
@@ -1841,11 +1841,18 @@
             const writerHtml = (writersStr && !showTime) ? `<span class="event-writer">${escapeHtml(writersStr)}</span>` : '';
             const completedClass = e.completed ? 'completed' : '';
 
+            const tooltipParts = [];
+            if (e.time) tooltipParts.push(`時間: ${e.time}`);
+            tooltipParts.push(`予定: ${e.title}`);
+            if (writersStr) tooltipParts.push(`担当: ${writersStr}`);
+            if (e.desc) tooltipParts.push(`詳細: ${e.desc}`);
+            const tooltipTitle = tooltipParts.join('\n');
+
             return `
                 <div class="event-chip ${completedClass}" 
                         data-category="${cat.id}"
                         style="background: ${cat.color}"
-                        title="${escapeHtml(e.title)}"
+                        title="${escapeHtml(tooltipTitle)}"
                         onclick="openEditModal('${e.id}', event)">
                         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                         ${e.time} ${escapeHtml(e.title)}
@@ -2083,8 +2090,8 @@
                         <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, 1)" ${idx === displayUsers.length - 1 ? 'disabled' : ''}>▼</button>
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <button class="btn btn-icon-only" style="padding:4px; font-size:0.8rem; height:auto;" onclick="editUser('${escapeHtml(name)}')" title="名前を修正">✏️</button>
-                        <span class="delete-btn" onclick="deleteUser('${escapeHtml(name)}')">&times;</span>
+                        <button class="btn btn-icon-only" style="padding:4px; font-size:0.8rem; height:auto;" onclick='editUser(${JSON.stringify(name)})' title="名前を修正">✏️</button>
+                        <span class="delete-btn" onclick='deleteUser(${JSON.stringify(name)})'>&times;</span>
                     </div>
                 </div>
              `).join('');
