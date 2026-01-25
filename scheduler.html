@@ -261,8 +261,6 @@
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: 40px repeat(6, minmax(120px, auto));
-            /* Dynamic height */
             border: 1px solid var(--grid-border);
             border-radius: 12px;
             background: var(--grid-border);
@@ -1722,23 +1720,35 @@
             const startDayIndex = firstDay.getDay();
             const totalDays = lastDay.getDate();
             const grid = document.getElementById('calendarGrid');
-            const headers = Array.from(grid.children).slice(0, 7);
-            grid.innerHTML = '';
-            headers.forEach(h => grid.appendChild(h));
+
+            const totalSlots = startDayIndex + totalDays;
+            const weeks = Math.ceil(totalSlots / 7);
+
+            grid.style.gridTemplateRows = `40px repeat(${weeks}, minmax(120px, auto))`;
+
+            let cells = '';
+
             const prevMonthLastDay = new Date(year, month, 0).getDate();
             for (let i = startDayIndex - 1; i >= 0; i--) {
-                grid.innerHTML += createDayHTML(prevMonthLastDay - i, true);
+                cells += createDayHTML(prevMonthLastDay - i, true);
             }
+
             const today = new Date();
             for (let i = 1; i <= totalDays; i++) {
                 const isToday = i === today.getDate() && month === today.getMonth() && year === today.getFullYear();
                 const dayDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                grid.innerHTML += createDayHTML(i, false, isToday, dayDateStr);
+                cells += createDayHTML(i, false, isToday, dayDateStr);
             }
-            const remaining = 42 - (startDayIndex + totalDays);
+
+            const remaining = (weeks * 7) - totalSlots;
             for (let i = 1; i <= remaining; i++) {
-                grid.innerHTML += createDayHTML(i, true);
+                cells += createDayHTML(i, true);
             }
+
+            const headers = Array.from(grid.querySelectorAll('.weekday'));
+            grid.innerHTML = '';
+            headers.forEach(h => grid.appendChild(h));
+            grid.innerHTML += cells;
         }
 
         function renderBoardView() {
@@ -1841,11 +1851,17 @@
             const writerHtml = (writersStr && !showTime) ? `<span class="event-writer">${escapeHtml(writersStr)}</span>` : '';
             const completedClass = e.completed ? 'completed' : '';
 
+            const tooltipParts = [];
+            if (e.time) tooltipParts.push(`時間: ${e.time}`);
+            tooltipParts.push(`予定: ${e.title}`);
+            if (writersStr) tooltipParts.push(`氏名: ${writersStr}`);
+            const tooltip = tooltipParts.join(' \n ');
+
             return `
                 <div class="event-chip ${completedClass}" 
                         data-category="${cat.id}"
                         style="background: ${cat.color}"
-                        title="${escapeHtml(e.title)}"
+                        title="${escapeHtml(tooltip)}"
                         onclick="openEditModal('${e.id}', event)">
                         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                         ${e.time} ${escapeHtml(e.title)}
@@ -2083,8 +2099,8 @@
                         <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, 1)" ${idx === displayUsers.length - 1 ? 'disabled' : ''}>▼</button>
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <button class="btn btn-icon-only" style="padding:4px; font-size:0.8rem; height:auto;" onclick="editUser('${escapeHtml(name)}')" title="名前を修正">✏️</button>
-                        <span class="delete-btn" onclick="deleteUser('${escapeHtml(name)}')">&times;</span>
+                        <button class="btn btn-icon-only" style="padding:4px; font-size:0.8rem; height:auto;" onclick="editUser(${JSON.stringify(name)})" title="名前を修正">✏️</button>
+                        <span class="delete-btn" onclick="deleteUser(${JSON.stringify(name)})">&times;</span>
                     </div>
                 </div>
              `).join('');
