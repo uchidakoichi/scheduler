@@ -410,6 +410,34 @@
             font-weight: bold;
         }
 
+        .event-chip.is-new::before {
+            content: "NEW";
+            font-size: 0.6rem;
+            background: #ef4444;
+            color: white;
+            padding: 0 4px;
+            border-radius: 4px;
+            margin-right: 4px;
+            font-weight: bold;
+            flex-shrink: 0;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+            text-decoration: none !important;
+        }
+
+        .event-chip.is-updated::before {
+            content: "更新";
+            font-size: 0.6rem;
+            background: var(--success-color);
+            color: white;
+            padding: 0 4px;
+            border-radius: 4px;
+            margin-right: 4px;
+            font-weight: bold;
+            flex-shrink: 0;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+            text-decoration: none !important;
+        }
+
         /* --- Modal --- */
         .modal-overlay {
             position: fixed;
@@ -451,6 +479,32 @@
 
         .modal-overlay.open .modal {
             transform: scale(1);
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+            padding-right: 0.5rem;
+            margin-right: -0.5rem;
+        }
+
+        /* Custom scrollbar for modal body */
+        .modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .modal-body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 10px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
         }
 
         .modal-header {
@@ -1010,41 +1064,43 @@
                 <button class="btn btn-icon-only" onclick="closeModal()"
                     style="border:none; background:none; font-size:1.5rem;">&times;</button>
             </div>
-            <div class="form-group">
-                <label>種別</label>
-                <div class="category-selector" id="modalCategorySelector">
-                    <!-- JS injected options -->
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>種別</label>
+                    <div class="category-selector" id="modalCategorySelector">
+                        <!-- JS injected options -->
+                    </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <label>タイトル</label>
-                <input type="text" id="eventTitle" placeholder="会議, 打ち合わせ等...">
-            </div>
-            <div class="form-group" style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
-                <div>
-                    <label>日付</label>
-                    <input type="date" id="eventDate">
+                <div class="form-group">
+                    <label>タイトル</label>
+                    <input type="text" id="eventTitle" placeholder="会議, 打ち合わせ等...">
                 </div>
-                <div>
-                    <label>時間</label>
-                    <input type="time" id="eventTime">
+                <div class="form-group" style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
+                    <div>
+                        <label>日付</label>
+                        <input type="date" id="eventDate">
+                    </div>
+                    <div>
+                        <label>時間</label>
+                        <input type="time" id="eventTime">
+                    </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <label>氏名 (複数選択可)</label>
-                <div class="writer-checkboxes" id="writerCheckboxes">
-                    <!-- JS injected -->
+                <div class="form-group">
+                    <label>氏名 (複数選択可)</label>
+                    <div class="writer-checkboxes" id="writerCheckboxes">
+                        <!-- JS injected -->
+                    </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <label>詳細 / メモ</label>
-                <textarea id="eventDesc" rows="3" placeholder="詳細を入力..."></textarea>
-            </div>
-            <div class="form-group" style="display:flex; align-items:center;">
-                <label style="margin-bottom:0; cursor:pointer; display:flex; align-items:center; gap:0.5rem;">
-                    <input type="checkbox" id="eventCompleted" style="width:20px; height:20px;">
-                    <span>完了としてマーク</span>
-                </label>
+                <div class="form-group">
+                    <label>詳細 / メモ</label>
+                    <textarea id="eventDesc" rows="3" placeholder="詳細を入力..."></textarea>
+                </div>
+                <div class="form-group" style="display:flex; align-items:center;">
+                    <label style="margin-bottom:0; cursor:pointer; display:flex; align-items:center; gap:0.5rem;">
+                        <input type="checkbox" id="eventCompleted" style="width:20px; height:20px;">
+                        <span>完了としてマーク</span>
+                    </label>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn" onclick="deleteEvent()" id="btnDelete"
@@ -1063,33 +1119,35 @@
                 <button class="btn btn-icon-only" onclick="closeUserModal()"
                     style="border:none; background:none; font-size:1.5rem;">&times;</button>
             </div>
-            <div class="form-group">
-                <div class="user-list" id="userListDisplay">
-                    <!-- JS Injected -->
+            <div class="modal-body">
+                <div class="form-group">
+                    <div class="user-list" id="userListDisplay">
+                        <!-- JS Injected -->
+                    </div>
                 </div>
-            </div>
-            <div class="form-group" style="display:flex; gap:0.5rem;">
-                <input type="text" id="newUserName" placeholder="新しい氏名を入力...">
-                <button class="btn primary" onclick="addUser()">追加</button>
-            </div>
-
-            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border-color);">
-
-            <div class="form-group">
-                <h4 style="margin-bottom:0.5rem; font-size:1rem;">プライベートデータ管理</h4>
-                <div style="display:flex; gap:0.5rem;">
-                    <button class="btn" onclick="exportPrivateData()">
-                        🔒 エクスポート
-                    </button>
-                    <button class="btn" onclick="document.getElementById('importFile').click()">
-                        📥 インポート
-                    </button>
-                    <input type="file" id="importFile" accept=".json" style="display:none;"
-                        onchange="importPrivateData(this)">
+                <div class="form-group" style="display:flex; gap:0.5rem;">
+                    <input type="text" id="newUserName" placeholder="新しい氏名を入力...">
+                    <button class="btn primary" onclick="addUser()">追加</button>
                 </div>
-                <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.5rem;">
-                    「秘」カテゴリの予定はブラウザ内にのみ保存されます。端末移行時はエクスポート/インポートしてください。
-                </p>
+
+                <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border-color);">
+
+                <div class="form-group">
+                    <h4 style="margin-bottom:0.5rem; font-size:1rem;">プライベートデータ管理</h4>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn" onclick="exportPrivateData()">
+                            🔒 エクスポート
+                        </button>
+                        <button class="btn" onclick="document.getElementById('importFile').click()">
+                            📥 インポート
+                        </button>
+                        <input type="file" id="importFile" accept=".json" style="display:none;"
+                            onchange="importPrivateData(this)">
+                    </div>
+                    <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.5rem;">
+                        「秘」カテゴリの予定はブラウザ内にのみ保存されます。端末移行時はエクスポート/インポートしてください。
+                    </p>
+                </div>
             </div>
         </div>
     </div>
@@ -1841,8 +1899,19 @@
             const writerHtml = (writersStr && !showTime) ? `<span class="event-writer">${escapeHtml(writersStr)}</span>` : '';
             const completedClass = e.completed ? 'completed' : '';
 
+            // Check if it's new or updated (within 24 hours)
+            let indicatorClass = '';
+            const now = Date.now();
+            const dayInMs = 24 * 60 * 60 * 1000;
+
+            if (e.createdAt && (now - e.createdAt < dayInMs)) {
+                indicatorClass = 'is-new';
+            } else if (e.updatedAt && (now - e.updatedAt < dayInMs)) {
+                indicatorClass = 'is-updated';
+            }
+
             return `
-                <div class="event-chip ${completedClass}" 
+                <div class="event-chip ${completedClass} ${indicatorClass}" 
                         data-category="${cat.id}"
                         style="background: ${cat.color}"
                         title="${escapeHtml(e.title)}"
