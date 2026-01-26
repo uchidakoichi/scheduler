@@ -261,8 +261,7 @@
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: 40px repeat(6, minmax(120px, auto));
-            /* Dynamic height */
+            /* grid-template-rows is now set dynamically by JS */
             border: 1px solid var(--grid-border);
             border-radius: 12px;
             background: var(--grid-border);
@@ -1780,6 +1779,13 @@
             const startDayIndex = firstDay.getDay();
             const totalDays = lastDay.getDate();
             const grid = document.getElementById('calendarGrid');
+
+            // --- Dynamic Grid Height ---
+            const totalCells = startDayIndex + totalDays;
+            const numWeeks = Math.ceil(totalCells / 7);
+            grid.style.gridTemplateRows = `40px repeat(${numWeeks}, minmax(120px, auto))`;
+
+
             const headers = Array.from(grid.children).slice(0, 7);
             grid.innerHTML = '';
             headers.forEach(h => grid.appendChild(h));
@@ -1793,7 +1799,9 @@
                 const dayDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
                 grid.innerHTML += createDayHTML(i, false, isToday, dayDateStr);
             }
-            const remaining = 42 - (startDayIndex + totalDays);
+
+            // Fill the remaining cells of the last week
+            const remaining = (numWeeks * 7) - totalCells;
             for (let i = 1; i <= remaining; i++) {
                 grid.innerHTML += createDayHTML(i, true);
             }
@@ -1910,11 +1918,21 @@
                 indicatorClass = 'is-updated';
             }
 
+
+            // Create a detailed tooltip
+            let tooltipText = `${e.time ? `[${e.time}] ` : ''}${e.title}`;
+            if (writersStr) {
+                tooltipText += `\n担当: ${writersStr}`;
+            }
+            if (e.desc) {
+                tooltipText += `\n\n${e.desc}`;
+            }
+
             return `
                 <div class="event-chip ${completedClass} ${indicatorClass}" 
                         data-category="${cat.id}"
                         style="background: ${cat.color}"
-                        title="${escapeHtml(e.title)}"
+                        title="${escapeHtml(tooltipText)}"
                         onclick="openEditModal('${e.id}', event)">
                         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                         ${e.time} ${escapeHtml(e.title)}
@@ -2152,8 +2170,8 @@
                         <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, 1)" ${idx === displayUsers.length - 1 ? 'disabled' : ''}>▼</button>
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <button class="btn btn-icon-only" style="padding:4px; font-size:0.8rem; height:auto;" onclick="editUser('${escapeHtml(name)}')" title="名前を修正">✏️</button>
-                        <span class="delete-btn" onclick="deleteUser('${escapeHtml(name)}')">&times;</span>
+                        <button class="btn btn-icon-only" style="padding:4px; font-size:0.8rem; height:auto;" onclick='editUser(${JSON.stringify(name)})' title="名前を修正">✏️</button>
+                        <span class="delete-btn" onclick='deleteUser(${JSON.stringify(name)})'>&times;</span>
                     </div>
                 </div>
              `).join('');
@@ -2394,6 +2412,8 @@
         async function deleteUser(nameRaw) {
             if (!confirm('このメンバーを削除しますか？')) return;
             state.users = state.users.filter(u => u !== nameRaw);
+            state.userOrder = state.userOrder.filter(u => u !== nameRaw);
+            await setPref(PREF_USER_ORDER, state.userOrder);
             renderUserList();
 
             // Save immediately (Master list update)
@@ -2460,6 +2480,10 @@
 
         // Boot
         init();
+
+        // Expose for testing
+        window.state = state;
+        window.renderCalendar = renderCalendar;
 
     </script>
 </body>
