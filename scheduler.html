@@ -261,7 +261,7 @@
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: 40px repeat(6, minmax(120px, auto));
+            grid-template-rows: 40px repeat(6, auto);
             /* Dynamic height */
             border: 1px solid var(--grid-border);
             border-radius: 12px;
@@ -1898,6 +1898,8 @@
 
             const writerHtml = (writersStr && !showTime) ? `<span class="event-writer">${escapeHtml(writersStr)}</span>` : '';
             const completedClass = e.completed ? 'completed' : '';
+            const fullTitle = `${e.time} ${e.title}` + (writersStr ? `\n担当: ${writersStr}` : '');
+
 
             // Check if it's new or updated (within 24 hours)
             let indicatorClass = '';
@@ -1914,7 +1916,7 @@
                 <div class="event-chip ${completedClass} ${indicatorClass}" 
                         data-category="${cat.id}"
                         style="background: ${cat.color}"
-                        title="${escapeHtml(e.title)}"
+                        title="${escapeHtml(fullTitle)}"
                         onclick="openEditModal('${e.id}', event)">
                         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                         ${e.time} ${escapeHtml(e.title)}
@@ -2068,7 +2070,9 @@
             return sorted;
         }
 
-        async function editUser(oldName) {
+        async function editUser(userIndex) {
+            const displayUsers = getSortedUsers();
+            const oldName = displayUsers[userIndex];
             const newName = prompt('修正後の氏名を入力してください:', oldName);
             if (!newName || newName === oldName) return;
 
@@ -2152,8 +2156,8 @@
                         <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, 1)" ${idx === displayUsers.length - 1 ? 'disabled' : ''}>▼</button>
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <button class="btn btn-icon-only" style="padding:4px; font-size:0.8rem; height:auto;" onclick="editUser('${escapeHtml(name)}')" title="名前を修正">✏️</button>
-                        <span class="delete-btn" onclick="deleteUser('${escapeHtml(name)}')">&times;</span>
+                        <button class="btn btn-icon-only" style="padding:4px; font-size:0.8rem; height:auto;" onclick="editUser(${idx})" title="名前を修正">✏️</button>
+                        <span class="delete-btn" onclick="deleteUser(${idx})">&times;</span>
                     </div>
                 </div>
              `).join('');
@@ -2391,9 +2395,11 @@
             }
         }
 
-        async function deleteUser(nameRaw) {
-            if (!confirm('このメンバーを削除しますか？')) return;
-            state.users = state.users.filter(u => u !== nameRaw);
+        async function deleteUser(userIndex) {
+            const displayUsers = getSortedUsers();
+            const nameToDelete = displayUsers[userIndex];
+            if (!confirm(`メンバー「${nameToDelete}」を削除しますか？`)) return;
+            state.users = state.users.filter(u => u !== nameToDelete);
             renderUserList();
 
             // Save immediately (Master list update)
