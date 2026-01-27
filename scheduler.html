@@ -261,8 +261,7 @@
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: 40px repeat(6, minmax(120px, auto));
-            /* Dynamic height */
+            /* grid-template-rows property is now set dynamically by JS */
             border: 1px solid var(--grid-border);
             border-radius: 12px;
             background: var(--grid-border);
@@ -1309,7 +1308,7 @@
         const PREF_LAST_WRITERS = 'lastSelectedWriters';
         const PREF_USER_ORDER = 'userSortOrder';
 
-        let fileHandle = null;
+        window.fileHandle = null; // Exposed for testing
         let filePoller = null;
         let lastModifiedTime = 0;
 
@@ -1435,18 +1434,18 @@
         async function connectDatabase() {
             try {
                 try {
-                    [fileHandle] = await window.showOpenFilePicker({
+                    [window.fileHandle] = await window.showOpenFilePicker({
                         types: [{ description: 'Scheduler Data JSON', accept: { 'application/json': ['.json'] } }],
                         multiple: false
                     });
-                    await setPref('lastFileHandle', fileHandle); // Save handle
+                    await setPref('lastFileHandle', window.fileHandle); // Save handle
                 } catch (e) {
                     if (confirm("既存ファイルが見つかりませんか？新しいデータファイルを作成しますか？")) {
-                        fileHandle = await window.showSaveFilePicker({
+                        window.fileHandle = await window.showSaveFilePicker({
                             suggestedName: 'scheduler_data.json',
                             types: [{ description: 'Scheduler Data JSON', accept: { 'application/json': ['.json'] } }]
                         });
-                        await setPref('lastFileHandle', fileHandle); // Save handle
+                        await setPref('lastFileHandle', window.fileHandle); // Save handle
                         state.events = [];
                         await writeToFile(state.events);
                     } else {
@@ -1461,7 +1460,7 @@
 
                 document.getElementById('introBarrier').style.display = 'none';
                 document.getElementById('mainContent').classList.add('active');
-                document.getElementById('btnConnect').textContent = '接続済み: ' + fileHandle.name;
+                document.getElementById('btnConnect').textContent = '接続済み: ' + window.fileHandle.name;
                 document.getElementById('btnConnect').classList.add('success');
                 document.getElementById('btnConnect').classList.remove('primary');
                 updateStatus('接続完了', 'connected');
@@ -1482,7 +1481,7 @@
                     }
                 }
 
-                fileHandle = handle;
+                window.fileHandle = handle;
                 await loadFromFile();
 
                 if (filePoller) clearInterval(filePoller);
@@ -1490,7 +1489,7 @@
 
                 document.getElementById('introBarrier').style.display = 'none';
                 document.getElementById('mainContent').classList.add('active');
-                document.getElementById('btnConnect').textContent = '接続済み: ' + fileHandle.name;
+                document.getElementById('btnConnect').textContent = '接続済み: ' + window.fileHandle.name;
                 document.getElementById('btnConnect').classList.add('success');
                 document.getElementById('btnConnect').classList.remove('primary');
                 document.getElementById('btnConnect').onclick = connectDatabase;
@@ -1505,9 +1504,9 @@
         }
 
         async function checkFileUpdates() {
-            if (!fileHandle) return;
+            if (!window.fileHandle) return;
             try {
-                const file = await fileHandle.getFile();
+                const file = await window.fileHandle.getFile();
                 if (file.lastModified > lastModifiedTime) {
                     updateStatus('同期中...', 'syncing');
                     const text = await file.text();
@@ -1533,7 +1532,7 @@
         }
 
         async function loadFromFile() {
-            const file = await fileHandle.getFile();
+            const file = await window.fileHandle.getFile();
             const text = await file.text();
             lastModifiedTime = file.lastModified;
 
@@ -1601,10 +1600,10 @@
         }
 
         async function writeToFile(events) {
-            if (!fileHandle) return;
+            if (!window.fileHandle) return;
             try {
                 updateStatus('保存中...', 'syncing');
-                const writable = await fileHandle.createWritable();
+                const writable = await window.fileHandle.createWritable();
                 // Save as object { users, events }
                 const data = {
                     users: state.users,
@@ -1613,7 +1612,7 @@
                 await writable.write(JSON.stringify(data, null, 2));
                 await writable.close();
 
-                const file = await fileHandle.getFile();
+                const file = await window.fileHandle.getFile();
                 lastModifiedTime = file.lastModified;
 
                 updateStatus('保存完了', 'connected');
@@ -1624,9 +1623,9 @@
         }
 
         async function saveTransaction(actionCallback) {
-            if (!fileHandle) return;
+            if (!window.fileHandle) return;
             try {
-                const file = await fileHandle.getFile();
+                const file = await window.fileHandle.getFile();
                 const text = await file.text();
                 let currentData = text ? JSON.parse(text) : { users: [], events: [] };
 
@@ -1780,6 +1779,13 @@
             const startDayIndex = firstDay.getDay();
             const totalDays = lastDay.getDate();
             const grid = document.getElementById('calendarGrid');
+
+            const totalCells = startDayIndex + totalDays;
+            const numWeeks = Math.ceil(totalCells / 7);
+
+            // Dynamically set grid rows
+            grid.style.gridTemplateRows = `40px repeat(${numWeeks}, minmax(120px, auto))`;
+
             const headers = Array.from(grid.children).slice(0, 7);
             grid.innerHTML = '';
             headers.forEach(h => grid.appendChild(h));
@@ -1793,7 +1799,8 @@
                 const dayDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
                 grid.innerHTML += createDayHTML(i, false, isToday, dayDateStr);
             }
-            const remaining = 42 - (startDayIndex + totalDays);
+            // Fill remaining cells of the grid
+            const remaining = (numWeeks * 7) - (startDayIndex + totalDays);
             for (let i = 1; i <= remaining; i++) {
                 grid.innerHTML += createDayHTML(i, true);
             }
@@ -1892,9 +1899,7 @@
         function createEventChip(e, showTime = false) {
             let catId = resolveCategoryId(e);
             const cat = CATEGORIES.find(c => c.id === catId) || CATEGORIES[0];
-            let writersStr = '';
-
-            if (e.writers && Array.isArray(e.writers)) writersStr = e.writers.join(', ');
+            let writersStr = (e.writers && e.writers.length > 0) ? e.writers.join(', ') : '(担当なし)';
 
             const writerHtml = (writersStr && !showTime) ? `<span class="event-writer">${escapeHtml(writersStr)}</span>` : '';
             const completedClass = e.completed ? 'completed' : '';
@@ -1910,14 +1915,23 @@
                 indicatorClass = 'is-updated';
             }
 
+            // Create a detailed tooltip
+            let tooltip = `[${cat.name}] ${e.title}\n`;
+            if (e.time) tooltip += `時間: ${e.time}\n`;
+            tooltip += `担当: ${writersStr}\n`;
+            if (e.desc) tooltip += `\n詳細:\n${e.desc}`;
+
+            // Determine display text
+            const displayText = showTime ? `${e.time} ${escapeHtml(e.title)}` : escapeHtml(e.title);
+
             return `
                 <div class="event-chip ${completedClass} ${indicatorClass}" 
                         data-category="${cat.id}"
                         style="background: ${cat.color}"
-                        title="${escapeHtml(e.title)}"
+                        title="${escapeHtml(tooltip)}"
                         onclick="openEditModal('${e.id}', event)">
                         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                        ${e.time} ${escapeHtml(e.title)}
+                        ${displayText}
                         </span>
                         ${writerHtml}
                 </div>
@@ -1992,7 +2006,7 @@
         // --- Modal Actions ---
 
         function openAddModal(dateStr, preselectedWriters = []) {
-            if (!fileHandle) { alert("まずは「データファイルを選択」してください。"); return; }
+            if (!window.fileHandle) { alert("まずは「データファイルを選択」してください。"); return; }
 
             editingEventId = null;
             document.getElementById('modalTitle').textContent = '予定を追加';
@@ -2119,7 +2133,7 @@
             renderCalendar();
 
             // Save actions
-            if (fileHandle) {
+            if (window.fileHandle) {
                 await saveTransaction((currentEvents) => {
                     return currentEvents.map(e => {
                         let newWriters = e.writers;
@@ -2152,8 +2166,8 @@
                         <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, 1)" ${idx === displayUsers.length - 1 ? 'disabled' : ''}>▼</button>
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <button class="btn btn-icon-only" style="padding:4px; font-size:0.8rem; height:auto;" onclick="editUser('${escapeHtml(name)}')" title="名前を修正">✏️</button>
-                        <span class="delete-btn" onclick="deleteUser('${escapeHtml(name)}')">&times;</span>
+                        <button class="btn btn-icon-only" style="padding:4px; font-size:0.8rem; height:auto;" onclick='editUser(${JSON.stringify(name)})' title="名前を修正">✏️</button>
+                        <span class="delete-btn" onclick='deleteUser(${JSON.stringify(name)})'>&times;</span>
                     </div>
                 </div>
              `).join('');
@@ -2235,39 +2249,20 @@
 
 
         async function moveUser(idx, direction) {
+            const displayUsers = getSortedUsers();
             const newIdx = idx + direction;
-            if (newIdx < 0 || newIdx >= state.users.length) return;
+            if (newIdx < 0 || newIdx >= displayUsers.length) return;
 
-            // Swap
-            const temp = state.users[idx];
-            state.users[idx] = state.users[newIdx];
-            state.users[newIdx] = temp;
+            // Swap in local array logic
+            const temp = displayUsers[idx];
+            displayUsers[idx] = displayUsers[newIdx];
+            displayUsers[newIdx] = temp;
+
+            state.userOrder = displayUsers;
+            await setPref(PREF_USER_ORDER, state.userOrder);
 
             renderUserList();
-
-            // Save immediately
-            if (fileHandle) {
-                try {
-                    const file = await fileHandle.getFile();
-                    const text = await file.text();
-                    let json = text ? JSON.parse(text) : { users: [], events: [] };
-
-                    // Keep events, update users
-                    if (json && json.events) {
-                        json.users = state.users;
-                    } else {
-                        // Fallback
-                        json = { users: state.users, events: [] };
-                    }
-
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(JSON.stringify(json, null, 2));
-                    await writable.close();
-                } catch (e) {
-                    console.error(e);
-                    alert('保存できませんでした');
-                }
-            }
+            renderCalendar();
         }
 
         async function exportPrivateData() {
@@ -2370,18 +2365,18 @@
             renderUserList();
 
             // Save immediately
-            if (fileHandle) {
+            if (window.fileHandle) {
                 // For user updates, we re-read file to avoid event overwrites, 
                 // but simpler to just write full object with current events.
                 try {
-                    const file = await fileHandle.getFile();
+                    const file = await window.fileHandle.getFile();
                     const text = await file.text();
                     let json = text ? JSON.parse(text) : { users: [], events: [] };
                     if (Array.isArray(json)) json = { users: [], events: json };
 
                     json.users = state.users;
 
-                    const writable = await fileHandle.createWritable();
+                    const writable = await window.fileHandle.createWritable();
                     await writable.write(JSON.stringify(json, null, 2));
                     await writable.close();
                 } catch (e) {
@@ -2391,26 +2386,37 @@
             }
         }
 
-        async function deleteUser(nameRaw) {
-            if (!confirm('このメンバーを削除しますか？')) return;
-            state.users = state.users.filter(u => u !== nameRaw);
+        async function deleteUser(nameToDelete) {
+            if (!confirm(`メンバー「${nameToDelete}」を削除しますか？`)) return;
+
+            // Remove from master list
+            state.users = state.users.filter(u => u !== nameToDelete);
+
+            // Remove from local sort order and save it
+            state.userOrder = state.userOrder.filter(u => u !== nameToDelete);
+            await setPref(PREF_USER_ORDER, state.userOrder);
+
             renderUserList();
 
-            // Save immediately (Master list update)
-            if (fileHandle) {
+            // Save master list update immediately
+            if (window.fileHandle) {
                 try {
-                    const file = await fileHandle.getFile();
+                    const file = await window.fileHandle.getFile();
                     const text = await file.text();
                     let json = text ? JSON.parse(text) : { users: [], events: [] };
                     if (Array.isArray(json)) json = { users: [], events: json };
 
                     json.users = state.users;
 
-                    const writable = await fileHandle.createWritable();
+                    const writable = await window.fileHandle.createWritable();
                     await writable.write(JSON.stringify(json, null, 2));
                     await writable.close();
+
+                    const updatedFile = await window.fileHandle.getFile();
+                    lastModifiedTime = updatedFile.lastModified;
                 } catch (e) {
                     console.error(e);
+                    alert('ファイルの保存中にエラーが発生しました。');
                 }
             }
         }
@@ -2460,6 +2466,10 @@
 
         // Boot
         init();
+
+        // Expose for testing
+        window.state = state;
+        window.renderCalendar = renderCalendar;
 
     </script>
 </body>
