@@ -262,8 +262,6 @@
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: 40px repeat(6, minmax(120px, auto));
-            /* Dynamic height */
             border: 1px solid var(--grid-border);
             border-radius: 12px;
             background: var(--grid-border);
@@ -1779,26 +1777,44 @@
             const month = state.currentDate.getMonth();
             const firstDay = new Date(year, month, 1);
             const lastDay = new Date(year, month + 1, 0);
-            const startDayIndex = firstDay.getDay();
+            const startDayIndex = firstDay.getDay(); // 0 for Sunday
             const totalDays = lastDay.getDate();
+
             const grid = document.getElementById('calendarGrid');
             const headers = Array.from(grid.children).slice(0, 7);
-            grid.innerHTML = '';
-            headers.forEach(h => grid.appendChild(h));
+            grid.innerHTML = ''; // Clear previous content
+            headers.forEach(h => grid.appendChild(h)); // Keep headers
+
+            // Calculate number of weeks needed
+            const totalSlots = startDayIndex + totalDays;
+            const weeks = Math.ceil(totalSlots / 7);
+
+            // Dynamically set grid rows
+            grid.style.gridTemplateRows = `40px repeat(${weeks}, minmax(120px, auto))`;
+
+            let dayCellsHTML = '';
+
+            // Previous month's days
             const prevMonthLastDay = new Date(year, month, 0).getDate();
             for (let i = startDayIndex - 1; i >= 0; i--) {
-                grid.innerHTML += createDayHTML(prevMonthLastDay - i, true);
+                dayCellsHTML += createDayHTML(prevMonthLastDay - i, true);
             }
+
+            // Current month's days
             const today = new Date();
             for (let i = 1; i <= totalDays; i++) {
                 const isToday = i === today.getDate() && month === today.getMonth() && year === today.getFullYear();
                 const dayDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                grid.innerHTML += createDayHTML(i, false, isToday, dayDateStr);
+                dayCellsHTML += createDayHTML(i, false, isToday, dayDateStr);
             }
-            const remaining = 42 - (startDayIndex + totalDays);
+
+            // Next month's days
+            const remaining = (weeks * 7) - totalSlots;
             for (let i = 1; i <= remaining; i++) {
-                grid.innerHTML += createDayHTML(i, true);
+                dayCellsHTML += createDayHTML(i, true);
             }
+
+            grid.innerHTML += dayCellsHTML; // Append all cells at once for performance
         }
 
         function renderBoardView() {
@@ -1894,9 +1910,7 @@
         function createEventChip(e, showTime = false) {
             let catId = resolveCategoryId(e);
             const cat = CATEGORIES.find(c => c.id === catId) || CATEGORIES[0];
-            let writersStr = '';
-
-            if (e.writers && Array.isArray(e.writers)) writersStr = e.writers.join(', ');
+            let writersStr = (e.writers && Array.isArray(e.writers)) ? e.writers.join(', ') : '';
 
             const writerHtml = (writersStr && !showTime) ? `<span class="event-writer">${escapeHtml(writersStr)}</span>` : '';
             const completedClass = e.completed ? 'completed' : '';
@@ -1912,14 +1926,25 @@
                 indicatorClass = 'is-updated';
             }
 
+            // Create a detailed tooltip
+            const tooltipParts = [
+                e.title,
+                `時間: ${e.time || '未設定'}`,
+                `氏名: ${writersStr || '未割り当て'}`
+            ];
+            if (e.desc) {
+                tooltipParts.push(`\n詳細:\n${e.desc}`);
+            }
+            const tooltip = escapeHtml(tooltipParts.join('\n'));
+
             return `
                 <div class="event-chip ${completedClass} ${indicatorClass}" 
                         data-category="${cat.id}"
                         style="background: ${cat.color}"
-                        title="${escapeHtml(e.title)}"
+                        title="${tooltip}"
                         onclick="openEditModal('${e.id}', event)">
                         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                        ${e.time} ${escapeHtml(e.title)}
+                        ${e.time ? `[${e.time}] ` : ''}${escapeHtml(e.title)}
                         </span>
                         ${writerHtml}
                 </div>
@@ -2395,24 +2420,36 @@
 
         async function deleteUser(nameRaw) {
             if (!confirm('このメンバーを削除しますか？')) return;
-            state.users = state.users.filter(u => u !== nameRaw);
-            renderUserList();
 
-            // Save immediately (Master list update)
+            // Update master list
+            state.users = state.users.filter(u => u !== nameRaw);
+
+            // Update local sort order
+            state.userOrder = state.userOrder.filter(u => u !== nameRaw);
+            await setPref(PREF_USER_ORDER, state.userOrder);
+
+            renderUserList();
+            renderCalendar(); // Refresh calendar to reflect user removal
+
+            // Save master list to file
             if (fileHandle) {
                 try {
+                    // We can simply write the current state back.
+                    // This assumes `state.events` is up to date.
+                    // To be safe, let's just update the users array in the file.
                     const file = await fileHandle.getFile();
                     const text = await file.text();
                     let json = text ? JSON.parse(text) : { users: [], events: [] };
                     if (Array.isArray(json)) json = { users: [], events: json };
 
-                    json.users = state.users;
+                    json.users = state.users; // Update with the filtered list
 
                     const writable = await fileHandle.createWritable();
                     await writable.write(JSON.stringify(json, null, 2));
                     await writable.close();
                 } catch (e) {
-                    console.error(e);
+                    console.error("Failed to save user deletion:", e);
+                    alert('メンバーリストの保存に失敗しました。');
                 }
             }
         }
