@@ -262,8 +262,6 @@
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: 40px repeat(6, minmax(120px, auto));
-            /* Dynamic height */
             border: 1px solid var(--grid-border);
             border-radius: 12px;
             background: var(--grid-border);
@@ -1782,6 +1780,13 @@
             const startDayIndex = firstDay.getDay();
             const totalDays = lastDay.getDate();
             const grid = document.getElementById('calendarGrid');
+
+            // --- Dynamic Row Height ---
+            const totalCells = startDayIndex + totalDays;
+            const numWeeks = Math.ceil(totalCells / 7);
+            grid.style.gridTemplateRows = `40px repeat(${numWeeks}, minmax(120px, auto))`;
+            // --- End Dynamic Row Height ---
+
             const headers = Array.from(grid.children).slice(0, 7);
             grid.innerHTML = '';
             headers.forEach(h => grid.appendChild(h));
@@ -1912,11 +1917,19 @@
                 indicatorClass = 'is-updated';
             }
 
+            // Build tooltip
+            const tooltipParts = [];
+            if (e.time) tooltipParts.push(`時間: ${e.time}`);
+            tooltipParts.push(`件名: ${e.title}`);
+            if (writersStr) tooltipParts.push(`氏名: ${writersStr}`);
+            if (e.desc) tooltipParts.push(`----\n${e.desc.trim()}`);
+            const tooltipContent = tooltipParts.join('\n');
+
             return `
                 <div class="event-chip ${completedClass} ${indicatorClass}" 
                         data-category="${cat.id}"
                         style="background: ${cat.color}"
-                        title="${escapeHtml(e.title)}"
+                        title="${escapeHtml(tooltipContent)}"
                         onclick="openEditModal('${e.id}', event)">
                         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                         ${e.time} ${escapeHtml(e.title)}
@@ -2154,8 +2167,8 @@
                         <button class="btn btn-icon-only" style="padding:2px; width:20px; height:20px; font-size:0.6rem;" onclick="moveUser(${idx}, 1)" ${idx === displayUsers.length - 1 ? 'disabled' : ''}>▼</button>
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <button class="btn btn-icon-only" style="padding:4px; font-size:0.8rem; height:auto;" onclick="editUser('${escapeHtml(name)}')" title="名前を修正">✏️</button>
-                        <span class="delete-btn" onclick="deleteUser('${escapeHtml(name)}')">&times;</span>
+                        <button class="btn btn-icon-only" style="padding:4px; font-size:0.8rem; height:auto;" onclick='editUser(${JSON.stringify(name)})' title="名前を修正">✏️</button>
+                        <span class="delete-btn" onclick='deleteUser(${JSON.stringify(name)})'>&times;</span>
                     </div>
                 </div>
              `).join('');
@@ -2234,42 +2247,21 @@
             document.getElementById('userModal').classList.remove('open');
         }
 
-
-
         async function moveUser(idx, direction) {
+            const displayUsers = getSortedUsers();
             const newIdx = idx + direction;
-            if (newIdx < 0 || newIdx >= state.users.length) return;
+            if (newIdx < 0 || newIdx >= displayUsers.length) return;
 
-            // Swap
-            const temp = state.users[idx];
-            state.users[idx] = state.users[newIdx];
-            state.users[newIdx] = temp;
+            // Swap in local array logic
+            const temp = displayUsers[idx];
+            displayUsers[idx] = displayUsers[newIdx];
+            displayUsers[newIdx] = temp;
+
+            state.userOrder = displayUsers;
+            await setPref(PREF_USER_ORDER, state.userOrder);
 
             renderUserList();
-
-            // Save immediately
-            if (fileHandle) {
-                try {
-                    const file = await fileHandle.getFile();
-                    const text = await file.text();
-                    let json = text ? JSON.parse(text) : { users: [], events: [] };
-
-                    // Keep events, update users
-                    if (json && json.events) {
-                        json.users = state.users;
-                    } else {
-                        // Fallback
-                        json = { users: state.users, events: [] };
-                    }
-
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(JSON.stringify(json, null, 2));
-                    await writable.close();
-                } catch (e) {
-                    console.error(e);
-                    alert('保存できませんでした');
-                }
-            }
+            renderCalendar();
         }
 
         async function exportPrivateData() {
@@ -2396,9 +2388,11 @@
         async function deleteUser(nameRaw) {
             if (!confirm('このメンバーを削除しますか？')) return;
             state.users = state.users.filter(u => u !== nameRaw);
+            state.userOrder = state.userOrder.filter(u => u !== nameRaw); // Also remove from order
             renderUserList();
 
             // Save immediately (Master list update)
+            await setPref(PREF_USER_ORDER, state.userOrder); // Save the new order
             if (fileHandle) {
                 try {
                     const file = await fileHandle.getFile();
@@ -2462,6 +2456,13 @@
 
         // Boot
         init();
+
+        // --- Debug/Test Hooks ---
+        window.state = state;
+        window.renderCalendar = renderCalendar;
+        window.deleteUser = deleteUser;
+        window.openUserModal = openUserModal;
+        window.closeUserModal = closeUserModal;
 
     </script>
 </body>
